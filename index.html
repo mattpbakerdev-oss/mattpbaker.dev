@@ -4,88 +4,377 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Matt Baker</title>
-<meta name="description" content="Matt Baker: product builder. I spec things, build them with AI coding agents, and measure what happened.">
+<meta name="description" content="Matt Baker: product builder. I spec products, build them with AI coding agents, and publish what the numbers did afterwards.">
 <meta property="og:title" content="Matt Baker">
-<meta property="og:description" content="Product builder. I spec things, build them with AI coding agents, and measure what happened.">
+<meta property="og:description" content="Product builder. I spec products, build them with AI coding agents, and publish what the numbers did afterwards.">
+<meta name="theme-color" content="#120F0F">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87,600;87,800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Instrument+Serif&family=Caveat:wght@500&display=swap">
 <style>
   :root {
-    --bg: #F4F5F1; --surface: #FFFFFF; --sunk: #E9EBE4;
-    --ink: #17201D; --ink-2: #48534F; --ink-3: #7A847F; --line: #D7DBD2;
-    --accent: #1F6F78; --accent-ink: #185A61; --accent-soft: #DFEEF0;
-    --display: "Archivo", "Arial Narrow", Arial, sans-serif;
-    --body: "Manrope", "Segoe UI", Helvetica, Arial, sans-serif;
-    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #15191C; --surface: #1C2226; --sunk: #242B30;
-      --ink: #EDF1EE; --ink-2: #B7C0BB; --ink-3: #85908A; --line: #30393E;
-      --accent: #5FC4CE; --accent-ink: #8ADDE5; --accent-soft: #163A3E;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #15191C; --surface: #1C2226; --sunk: #242B30;
-    --ink: #EDF1EE; --ink-2: #B7C0BB; --ink-3: #85908A; --line: #30393E;
-    --accent: #5FC4CE; --accent-ink: #8ADDE5; --accent-soft: #163A3E;
+    --bg: #120F0F;
+    --bg-raised: #1C1717;
+    --bg-raised-2: #262020;
+    --glow: #6B1A1A;
+    --accent: #E0A94A;
+    --ink: #F5F1EE;
+    --ink-2: #B8AFAC;
+    --line: rgba(245,241,238,0.14);
+    --paper: #F5F1EE;
+    --sans: "Onest", "Segoe UI", Helvetica, Arial, sans-serif;
+    --serif: "Instrument Serif", Georgia, serif;
+    --hand: "Caveat", "Bradley Hand", cursive;
+    --gutter: 32px;
+    --radius-frame: 24px;
+    --radius-card: 20px;
     color-scheme: dark;
   }
+  @media (max-width: 720px) { :root { --gutter: 20px; } }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; min-height: 100svh; display: grid; grid-template-rows: 1fr auto; }
-  .wrap { max-width: 840px; margin: 0 auto; padding: 64px 20px 40px; width: 100%; }
-  a { color: var(--accent-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
-  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  h1 { font-family: var(--display); font-stretch: 87%; font-size: clamp(2.6rem, 7vw, 4.2rem); font-weight: 800; line-height: 0.95; letter-spacing: -0.015em; margin: 0 0 14px; }
-  .lede { font-size: 1.2rem; color: var(--ink-2); max-width: 54ch; margin: 0 0 40px; }
-  .lede strong { color: var(--ink); font-weight: 600; }
-  .eyebrow { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 12px; }
-  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; text-decoration: none; color: inherit; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  .card:hover { border-color: var(--accent); }
-  .card h2 { font-family: var(--display); font-stretch: 87%; font-size: 1.3rem; font-weight: 800; margin: 0; line-height: 1.15; }
-  .card p { margin: 0; font-size: 0.93rem; color: var(--ink-2); }
-  .card .k { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); }
-  .how { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--ink-2); max-width: 60ch; }
-  .how p { margin: 0 0 10px; }
-  footer { padding: 20px; border-top: 1px solid var(--line); font-size: 0.9rem; color: var(--ink-3); }
-  footer .wrap { padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  html, body { overflow-x: clip; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 17px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  p a { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+  p a:hover { text-decoration-color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  img { display: block; max-width: 100%; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding-left: var(--gutter); padding-right: var(--gutter); }
+
+  /* Buttons */
+  .pill {
+    display: inline-flex; align-items: center; gap: 12px;
+    height: 48px; padding: 0 8px 0 22px; border-radius: 999px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    font: 500 15px/1 var(--sans); white-space: nowrap; cursor: pointer;
+    transition: border-color .2s, background-color .2s;
+  }
+  .pill:hover { border-color: rgba(245,241,238,0.4); background: rgba(245,241,238,0.04); }
+  .pill.plain { padding-right: 22px; }
+  .pill .disc {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: var(--bg);
+    display: inline-grid; place-items: center; flex: none;
+  }
+  .pill .disc svg { width: 14px; height: 14px; }
+
+  /* Nav */
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
+    padding-top: 20px; padding-bottom: 20px;
+    background: rgba(18,15,15,0.82); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .wordmark { font-family: var(--serif); font-size: 1.4rem; letter-spacing: 0.02em; line-height: 1; }
+  .nav-pill {
+    display: flex; gap: 4px; height: 48px; padding: 0 8px; align-items: center;
+    background: var(--bg-raised); border: 1px solid var(--line); border-radius: 999px;
+    max-width: 100%; overflow-x: auto; scrollbar-width: none;
+  }
+  .nav-pill::-webkit-scrollbar { display: none; }
+  .nav-pill a {
+    position: relative; padding: 0 14px; height: 100%; display: inline-flex; align-items: center;
+    font-size: 15px; color: var(--ink-2); white-space: nowrap; transition: color .2s;
+  }
+  .nav-pill a:hover, .nav-pill a[aria-current="true"] { color: var(--ink); }
+  .nav-pill a::after {
+    content: ""; position: absolute; left: 14px; right: 14px; bottom: 9px; height: 2px;
+    background: var(--accent); border-radius: 2px; transform: scaleX(0); transform-origin: left;
+    transition: transform .25s ease;
+  }
+  .nav-pill a[aria-current="true"]::after { transform: scaleX(1); }
+  .nav-right { justify-self: end; }
+  @media (max-width: 840px) {
+    .nav { grid-template-columns: 1fr auto; row-gap: 12px; padding-top: 16px; padding-bottom: 12px; }
+    .wordmark { grid-row: 1; grid-column: 1; }
+    .nav-right { grid-row: 1; grid-column: 2; }
+    .nav-pill { grid-row: 2; grid-column: 1 / -1; justify-self: start; height: 44px; }
+    .nav-pill a { padding: 0 12px; font-size: 14px; }
+    .nav-right .pill { height: 40px; padding: 0 16px; font-size: 14px; }
+  }
+
+  /* Hero */
+  .hero {
+    position: relative; isolation: isolate;
+    min-height: calc(100svh - 88px);
+    display: grid; grid-template-rows: 1fr auto; row-gap: 40px;
+    padding-top: 8px; padding-bottom: 40px;
+  }
+  .hero::before {
+    content: ""; position: absolute; z-index: -1; pointer-events: none;
+    width: 1300px; height: 1300px; right: -260px; top: -520px; border-radius: 50%;
+    background: radial-gradient(circle at center, rgba(107,26,26,0.95) 0%, rgba(107,26,26,0.45) 28%, rgba(107,26,26,0.12) 50%, transparent 68%);
+    opacity: 0; animation: glow-in 1.2s ease-out .1s forwards;
+  }
+  .hero-grid {
+    display: grid; grid-template-columns: minmax(0, 11fr) minmax(0, 10fr); gap: 48px; align-items: center;
+  }
+  h1 {
+    font-size: clamp(2.8rem, 5.6vw, 5.25rem); font-weight: 600; line-height: 1.0; letter-spacing: -0.03em;
+    margin: 0 0 28px; max-width: 13ch; text-wrap: balance;
+  }
+  .lede { font-size: clamp(1.05rem, 1.4vw, 1.25rem); color: var(--ink-2); max-width: 44ch; margin: 0 0 44px; }
+  .frame {
+    margin: 0; position: relative; aspect-ratio: 4 / 5; max-height: 64vh; width: 100%; justify-self: end;
+    border: 1px solid var(--line); border-radius: var(--radius-frame); overflow: hidden;
+    opacity: 0; transform: translateY(12px); animation: rise-in .9s ease-out .25s forwards;
+  }
+  .frame .ph-portrait {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(60% 45% at 50% 38%, rgba(245,241,238,0.10), transparent 70%),
+      linear-gradient(180deg, #2a1c1c 0%, #1a1414 55%, #120F0F 100%);
+  }
+  .frame figcaption {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 72px 28px 28px; text-align: center;
+    background: linear-gradient(to top, rgba(18,15,15,0.95), rgba(18,15,15,0.6) 50%, transparent);
+  }
+  .frame figcaption b { display: block; font-size: 1.6rem; font-weight: 500; line-height: 1.2; }
+  .frame figcaption span { color: var(--ink-2); font-size: 0.95rem; }
+  .ph-note {
+    position: absolute; top: 16px; left: 16px; font-size: 12px; color: var(--ink-2);
+    border: 1px dashed var(--line); border-radius: 999px; padding: 4px 10px; opacity: .8;
+  }
+  @keyframes glow-in { to { opacity: 1; } }
+  @keyframes rise-in { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hero::before, .frame { animation: none; opacity: 1; transform: none; }
+    .nav-pill a::after { transition: none; }
+  }
+  @media (max-width: 900px) {
+    .hero { min-height: 0; row-gap: 40px; }
+    .hero::before { width: 900px; height: 900px; right: -420px; top: -300px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .frame { max-height: none; max-width: 440px; justify-self: start; }
+  }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .stat b { display: block; font-size: clamp(2rem, 3.5vw, 2.75rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .stat span { display: block; color: var(--ink-2); font-size: 0.95rem; margin-top: 6px; max-width: 22ch; }
+  @media (max-width: 720px) {
+    .stats { grid-template-columns: 1fr 1fr; gap: 28px 20px; }
+    .stats .stat:first-child { grid-column: 1 / -1; }
+  }
+
+  /* Sections */
+  .section { padding-top: 112px; padding-bottom: 32px; scroll-margin-top: 60px; }
+  .section h2 {
+    font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 400; line-height: 1; letter-spacing: -0.03em;
+    margin: 0 0 40px;
+  }
+  .section h2::after { content: "."; color: var(--accent); }
+  @media (max-width: 840px) { .section { scroll-margin-top: 40px; } }
+  @media (max-width: 720px) { .section { padding-top: 80px; } }
+
+  /* Work cards */
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .card {
+    position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 20px;
+    background: var(--bg-raised); border-radius: var(--radius-card); padding: 26px 26px 28px; min-height: 320px;
+    transition: background-color .2s;
+  }
+  .card:hover { background: #211b1b; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .card h3 { margin: 0; font-size: 1.35rem; font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; }
+  .card .arrow { color: var(--accent); flex: none; width: 22px; height: 22px; margin-top: 4px; transition: transform .2s; }
+  .card:hover .arrow { transform: translate(2px, -2px); }
+  .card p { margin: 0; color: var(--ink-2); font-size: 0.98rem; flex: 1; max-width: 38ch; }
+  .card p b { color: var(--ink); font-weight: 500; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; position: relative; z-index: 1; }
+  .tags span { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--bg-raised-2); color: var(--ink-2); }
+  .ghost {
+    position: absolute; right: -6px; bottom: -22px; font-size: 8.5rem; font-weight: 500; line-height: 0.8;
+    letter-spacing: -0.05em; color: rgba(245,241,238,0.06); pointer-events: none; user-select: none;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  @media (max-width: 960px) { .cards { grid-template-columns: 1fr; } .card { min-height: 0; } }
+
+  /* Stack cloud */
+  .cloud { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 12px; max-width: 760px; margin: 0 auto; padding: 16px 0 8px; }
+  .cloud span {
+    display: inline-block; padding: 12px 22px; border-radius: 999px; font-size: 15px; font-weight: 500;
+    background: var(--bg-raised); color: var(--ink); transform: rotate(var(--r, 0deg));
+  }
+  .cloud .amber { background: var(--accent); color: var(--bg); }
+  .cloud .outline { background: transparent; border: 1px solid var(--line); color: var(--ink-2); }
+
+  /* About: polaroids */
+  .about-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 56px; align-items: center; }
+  .polaroids { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; align-items: center; padding: 24px 12px; }
+  .polaroid {
+    margin: 0; background: var(--paper); color: #1a1414; padding: 12px 12px 10px; border-radius: 6px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform: rotate(var(--r)) translateY(var(--y, 0));
+    width: 104%; position: relative;
+  }
+  .polaroid:nth-child(1) { --r: -4deg; justify-self: start; z-index: 1; }
+  .polaroid:nth-child(2) { --r: 0deg; --y: -16px; justify-self: center; z-index: 3; }
+  .polaroid:nth-child(3) { --r: 3deg; justify-self: end; z-index: 2; }
+  .polaroid .ph { aspect-ratio: 4 / 3; border-radius: 2px; background: linear-gradient(135deg, #3a2e2c, #241c1c); }
+  .polaroid figcaption { font-family: var(--hand); font-size: 1.15rem; line-height: 1.2; padding: 10px 4px 6px; }
+  .about-text p { margin: 0 0 16px; color: var(--ink-2); max-width: 52ch; }
+  .about-text p b { color: var(--ink); font-weight: 500; }
+  @media (max-width: 900px) {
+    .about-grid { grid-template-columns: 1fr; gap: 40px; }
+    .polaroids { max-width: 520px; }
+  }
+  @media (max-width: 560px) {
+    .polaroids { grid-template-columns: 1fr; gap: 24px; max-width: 300px; margin: 0 auto; }
+    .polaroid { width: 100%; }
+    .polaroid:nth-child(1) { --r: -2deg; } .polaroid:nth-child(3) { --r: 1.5deg; } .polaroid:nth-child(2) { --y: 0; }
+  }
+
+  /* How I work */
+  .prose p { margin: 0 0 16px; color: var(--ink-2); max-width: 60ch; }
+  .prose p b { color: var(--ink); font-weight: 500; }
+
+  /* Footer */
+  footer { margin-top: 112px; padding: 32px 0 40px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 0.95rem; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+  footer .built { margin-left: auto; }
+  footer .built b { color: var(--ink); font-weight: 500; }
+  @media (max-width: 720px) { footer { margin-top: 80px; } footer .built { margin-left: 0; width: 100%; } }
 </style>
 </head>
 <body>
-<main class="wrap">
-  <h1>Matt Baker</h1>
-  <p class="lede"><strong>Product builder.</strong> I spec things, build them with AI coding agents, and measure what happened. Business graduate from Bristol, relocating to Bangkok.</p>
 
-  <span class="eyebrow">Things I've built</span>
-  <div class="cards">
-    <a class="card" href="https://listing-check.mattpbaker.dev" target="_blank" rel="noopener">
-      <span class="k">Web tool · 2026</span>
-      <h2>Listing Check</h2>
-      <p>A pre-publish checker for Bangkok rental agents: completeness score, price benchmark, and a guarded AI rewrite in English and Thai. Measured: flagged listings from 79.6 to 98.0.</p>
-    </a>
-    <a class="card" href="https://apps.apple.com/app/id6784176155" target="_blank" rel="noopener">
-      <span class="k">iOS app · App Store</span>
-      <h2>Up Lock</h2>
-      <p>Blocks distracting apps until you do a set of push-ups. The camera counts reps on the phone, with an anti-cheat rule that took two tries to get right.</p>
-    </a>
-    <a class="card" href="https://github.com/mattpbakerdev-oss/ugc-shorts-pipeline" target="_blank" rel="noopener">
-      <span class="k">Pipeline · open source</span>
-      <h2>UGC shorts pipeline</h2>
-      <p>Turns talking-head takes into captioned, graphic-timed shorts from a small storyboard. Built for paid content work when editing by hand stopped scaling.</p>
-    </a>
+<header class="nav wrap">
+  <a class="wordmark" href="#top">Matt Baker</a>
+  <nav class="nav-pill" aria-label="Sections">
+    <a href="#work" data-spy>Work</a>
+    <a href="#stack" data-spy>Stack</a>
+    <a href="#about" data-spy>About</a>
+    <a href="#how" data-spy>How I work</a>
+  </nav>
+  <div class="nav-right">
+    <a class="pill plain" href="mailto:mattpbakerdev@gmail.com">Email me</a>
   </div>
+</header>
 
-  <div class="how">
-    <p>How I work: a one-page spec first, then Claude Code builds while I review each plan, and a build log that records what the AI got wrong and how it was fixed. The logs are in the repos.</p>
-  </div>
+<main id="top">
+  <section class="hero wrap">
+    <div class="hero-grid">
+      <div>
+        <h1>Build the thing, measure what happened</h1>
+        <p class="lede">I spec products, build them with AI coding agents, and publish what the numbers did afterwards. Business graduate from Bristol, relocating to Bangkok.</p>
+        <a class="pill" href="#work">See the work
+          <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 12 4M6 4h6v6"/></svg></span>
+        </a>
+      </div>
+      <figure class="frame">
+        <div class="ph-portrait" role="img" aria-label="Portrait placeholder"></div>
+        <span class="ph-note" aria-hidden="true">portrait coming</span>
+        <figcaption><b>Matt Baker</b><span>Product builder</span></figcaption>
+      </figure>
+    </div>
+    <div class="stats" role="list">
+      <div class="stat" role="listitem"><b>79.6 → 98.0</b><span>Listing quality score before and after Listing Check</span></div>
+      <div class="stat" role="listitem"><b>3</b><span>Products shipped in 2026</span></div>
+      <div class="stat" role="listitem"><b>2</b><span>Languages in the guarded AI rewrite</span></div>
+      <div class="stat" role="listitem"><b>1</b><span>iOS app live on the App Store</span></div>
+    </div>
+  </section>
+
+  <section class="section wrap" id="work">
+    <h2>work</h2>
+    <div class="cards">
+      <a class="card" href="https://listing-check.mattpbaker.dev" target="_blank" rel="noopener">
+        <div class="card-head"><h3>Listing Check</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
+        <p>A pre-publish checker for Bangkok rental agents: completeness score, price benchmark, and a guarded AI rewrite in English and Thai. <b>Flagged listings went from 79.6 to 98.0.</b></p>
+        <div class="tags"><span>Next.js</span><span>TypeScript</span><span>Supabase</span><span>Vercel</span></div>
+        <span class="ghost" aria-hidden="true">98.0</span>
+      </a>
+      <a class="card" href="https://apps.apple.com/app/id6784176155" target="_blank" rel="noopener">
+        <div class="card-head"><h3>Up Lock</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
+        <p>Blocks distracting apps until you do a set of push-ups. The camera counts reps on the phone, with an anti-cheat rule that took two tries to get right. <b>Live on the App Store.</b></p>
+        <div class="tags"><span>Swift</span><span>Vision</span><span>Screen Time API</span></div>
+        <span class="ghost" aria-hidden="true">1</span>
+      </a>
+      <a class="card" href="https://github.com/mattpbakerdev-oss/ugc-shorts-pipeline" target="_blank" rel="noopener">
+        <div class="card-head"><h3>UGC shorts pipeline</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
+        <p>Turns talking-head takes into captioned, graphic-timed shorts from a small storyboard. Built for paid content work when editing by hand stopped scaling. <b>Open source.</b></p>
+        <div class="tags"><span>Python</span><span>ffmpeg</span><span>Whisper</span></div>
+        <span class="ghost" aria-hidden="true">3</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="section wrap" id="stack">
+    <h2>stack</h2>
+    <div class="cloud" role="list">
+      <span role="listitem" style="--r:-4deg" class="amber">Claude Code</span>
+      <span role="listitem" style="--r:3deg">Next.js</span>
+      <span role="listitem" style="--r:-2deg" class="outline">TypeScript</span>
+      <span role="listitem" style="--r:5deg">Supabase</span>
+      <span role="listitem" style="--r:-5deg">Swift</span>
+      <span role="listitem" style="--r:2deg" class="outline">Vision</span>
+      <span role="listitem" style="--r:-3deg">Python</span>
+      <span role="listitem" style="--r:4deg" class="amber">Vercel</span>
+      <span role="listitem" style="--r:-1deg">ffmpeg</span>
+      <span role="listitem" style="--r:3deg" class="outline">Postgres</span>
+      <span role="listitem" style="--r:-4deg">Git</span>
+    </div>
+  </section>
+
+  <section class="section wrap" id="about">
+    <h2>about</h2>
+    <div class="about-grid">
+      <div class="polaroids">
+        <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: Bristol"></div><figcaption>Bristol, the degree</figcaption></figure>
+        <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: the desk"></div><figcaption>the desk, the specs</figcaption></figure>
+        <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: Bangkok"></div><figcaption>Bangkok, next</figcaption></figure>
+      </div>
+      <div class="about-text">
+        <p><b>Business graduate from Bristol,</b> now relocating to Bangkok. I came to building through the product side: writing the spec, deciding what to measure, and then finding that AI coding agents meant I could ship the thing myself.</p>
+        <p>What I'm looking for is a product role where the loop is tight: a real user problem, a build, a number, and the next decision made from that number.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap prose" id="how">
+    <h2>how I work</h2>
+    <p><b>A one-page spec first.</b> What the thing is, who it is for, and the number that will tell us whether it worked.</p>
+    <p><b>Then Claude Code builds</b> while I review each plan before it runs. I stay on the product decisions and let the agent stay on the typing.</p>
+    <p><b>Every build keeps a log</b> of what the AI got wrong and how it was fixed. The logs are in the repos, next to the code.</p>
+  </section>
 </main>
+
 <footer>
   <div class="wrap">
     <a href="mailto:mattpbakerdev@gmail.com">mattpbakerdev@gmail.com</a>
     <a href="https://github.com/mattpbakerdev-oss" target="_blank" rel="noopener">GitHub</a>
+    <span class="built">Built with <b>Claude Code</b> by Matt</span>
   </div>
 </footer>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('[data-spy]'));
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var sections = Object.keys(map).map(function (id) { return document.getElementById(id); }).filter(Boolean);
+    function setActive(id) {
+      links.forEach(function (a) { a.removeAttribute('aria-current'); });
+      if (id && map[id]) map[id].setAttribute('aria-current', 'true');
+    }
+    if (!('IntersectionObserver' in window)) return;
+    var visible = {};
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { visible[e.target.id] = e.isIntersecting ? e.intersectionRatio : 0; });
+      var best = null, bestRatio = 0;
+      sections.forEach(function (s) { if ((visible[s.id] || 0) > bestRatio) { best = s.id; bestRatio = visible[s.id]; } });
+      if (window.scrollY < 200) best = null;
+      setActive(best);
+    }, { rootMargin: '-35% 0px -45% 0px', threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] });
+    sections.forEach(function (s) { io.observe(s); });
+  })();
+</script>
 </body>
 </html>
