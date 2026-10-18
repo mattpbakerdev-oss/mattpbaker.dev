@@ -27,7 +27,6 @@
     --serif: "Instrument Serif", Georgia, serif;
     --hand: "Caveat", "Bradley Hand", cursive;
     --gutter: 32px;
-    --radius-frame: 24px;
     --radius-card: 20px;
     color-scheme: dark;
   }
@@ -110,50 +109,25 @@
   }
   .hero::before {
     content: ""; position: absolute; z-index: -1; pointer-events: none;
-    width: 1300px; height: 1300px; right: -260px; top: -520px; border-radius: 50%;
+    width: 1300px; height: 1300px; right: -200px; top: -560px; border-radius: 50%;
     background: radial-gradient(circle at center, rgba(107,26,26,0.95) 0%, rgba(107,26,26,0.45) 28%, rgba(107,26,26,0.12) 50%, transparent 68%);
     opacity: 0; animation: glow-in 1.2s ease-out .1s forwards;
   }
-  .hero-grid {
-    display: grid; grid-template-columns: minmax(0, 11fr) minmax(0, 10fr); gap: 48px; align-items: center;
-  }
+  .hero-grid { display: grid; align-content: center; padding-top: 48px; }
   h1 {
-    font-size: clamp(2.8rem, 5.6vw, 5.25rem); font-weight: 600; line-height: 1.0; letter-spacing: -0.03em;
-    margin: 0 0 28px; max-width: 13ch; text-wrap: balance;
+    font-size: clamp(3rem, 7vw, 6.5rem); font-weight: 600; line-height: 1.0; letter-spacing: -0.03em;
+    margin: 0 0 32px; max-width: 13ch; text-wrap: balance;
   }
   .lede { font-size: clamp(1.05rem, 1.4vw, 1.25rem); color: var(--ink-2); max-width: 44ch; margin: 0 0 44px; }
-  .frame {
-    margin: 0; position: relative; aspect-ratio: 4 / 5; max-height: 64vh; width: 100%; justify-self: end;
-    border: 1px solid var(--line); border-radius: var(--radius-frame); overflow: hidden;
-    opacity: 0; transform: translateY(12px); animation: rise-in .9s ease-out .25s forwards;
-  }
-  .frame .ph-portrait {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(60% 45% at 50% 38%, rgba(245,241,238,0.10), transparent 70%),
-      linear-gradient(180deg, #2a1c1c 0%, #1a1414 55%, #120F0F 100%);
-  }
-  .frame figcaption {
-    position: absolute; left: 0; right: 0; bottom: 0; padding: 72px 28px 28px; text-align: center;
-    background: linear-gradient(to top, rgba(18,15,15,0.95), rgba(18,15,15,0.6) 50%, transparent);
-  }
-  .frame figcaption b { display: block; font-size: 1.6rem; font-weight: 500; line-height: 1.2; }
-  .frame figcaption span { color: var(--ink-2); font-size: 0.95rem; }
-  .ph-note {
-    position: absolute; top: 16px; left: 16px; font-size: 12px; color: var(--ink-2);
-    border: 1px dashed var(--line); border-radius: 999px; padding: 4px 10px; opacity: .8;
-  }
   @keyframes glow-in { to { opacity: 1; } }
-  @keyframes rise-in { to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .hero::before, .frame { animation: none; opacity: 1; transform: none; }
+    .hero::before { animation: none; opacity: 1; }
     .nav-pill a::after { transition: none; }
   }
   @media (max-width: 900px) {
-    .hero { min-height: 0; row-gap: 40px; }
+    .hero { min-height: 0; row-gap: 48px; }
     .hero::before { width: 900px; height: 900px; right: -420px; top: -300px; }
-    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
-    .frame { max-height: none; max-width: 440px; justify-self: start; }
+    .hero-grid { padding-top: 24px; }
   }
 
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
@@ -264,21 +238,16 @@
       <div>
         <h1>Build the thing, measure what happened</h1>
         <p class="lede">I spec products, build them with AI coding agents, and publish what the numbers did afterwards. Business graduate from Bristol, relocating to Bangkok.</p>
-        <a class="pill" href="#work">See the work
+        <a class="pill" href="https://listing-check.mattpbaker.dev" target="_blank" rel="noopener">See the work
           <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 12 4M6 4h6v6"/></svg></span>
         </a>
       </div>
-      <figure class="frame">
-        <div class="ph-portrait" role="img" aria-label="Portrait placeholder"></div>
-        <span class="ph-note" aria-hidden="true">portrait coming</span>
-        <figcaption><b>Matt Baker</b><span>Product builder</span></figcaption>
-      </figure>
     </div>
     <div class="stats" role="list">
       <div class="stat" role="listitem"><b>79.6 → 98.0</b><span>Listing quality score before and after Listing Check</span></div>
-      <div class="stat" role="listitem"><b>3</b><span>Products shipped in 2026</span></div>
-      <div class="stat" role="listitem"><b>2</b><span>Languages in the guarded AI rewrite</span></div>
-      <div class="stat" role="listitem"><b>1</b><span>iOS app live on the App Store</span></div>
+      <div class="stat" role="listitem"><b>27 videos</b><span>26,000 views in the pipeline's first three weeks</span></div>
+      <div class="stat" role="listitem"><b>274 tests</b><span>Across Listing Check, written as it was built</span></div>
+      <div class="stat" role="listitem"><b>4 evenings</b><span>Listing Check from one-page spec to live URL</span></div>
     </div>
   </section>
 
@@ -300,7 +269,7 @@
       <a class="card" href="https://github.com/mattpbakerdev-oss/ugc-shorts-pipeline" target="_blank" rel="noopener">
         <div class="card-head"><h3>UGC shorts pipeline</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
         <p>Turns talking-head takes into captioned, graphic-timed shorts from a small storyboard. Built for paid content work when editing by hand stopped scaling. <b>Open source.</b></p>
-        <div class="tags"><span>Python</span><span>ffmpeg</span><span>Whisper</span></div>
+        <div class="tags"><span>TypeScript</span><span>Remotion</span><span>whisper.cpp</span></div>
         <span class="ghost" aria-hidden="true">3</span>
       </a>
     </div>
