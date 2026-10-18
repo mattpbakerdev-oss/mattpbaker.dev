@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Listing Check · Matt Baker</title>
+<meta name="description" content="Listing Check: a pre-publish checker for Bangkok rental agents. The 60-second walkthrough, what was measured, and what the AI got wrong on the way.">
+<meta property="og:title" content="Listing Check · Matt Baker">
+<meta property="og:description" content="A pre-publish checker for Bangkok rental agents, built in four evenings from a one-page spec. Walkthrough, numbers, and the AI failures that were caught.">
+<meta property="og:image" content="https://mattpbaker.dev/propertyscout/img/og.png">
+<meta property="og:url" content="https://mattpbaker.dev/work/listing-check">
+<meta name="theme-color" content="#120F0F">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/work/work.css">
+</head>
+<body>
+
+<header class="nav wrap">
+  <a class="wordmark" href="/">Matt Baker</a>
+  <nav class="nav-pill" aria-label="Work">
+    <a href="/work/listing-check" aria-current="page">Listing Check</a>
+    <a href="/work/up-lock">Up Lock</a>
+    <a href="/work/ugc-pipeline">UGC pipeline</a>
+  </nav>
+  <div class="nav-right">
+    <a class="pill" href="mailto:mattpbakerdev@gmail.com">Email me</a>
+  </div>
+</header>
+
+<main>
+  <section class="page-head wrap">
+    <p class="crumb"><a href="/">Work</a> / Listing Check</p>
+    <h1>Listing Check</h1>
+    <p class="lede"><b>A pre-publish checker for Bangkok rental agents.</b> Paste a draft listing and it scores completeness out of 100 with per-field fixes, benchmarks the rent per square metre against comparable listings, and offers an AI rewrite in English and Thai that may only use facts from the draft. Built in four evenings from a one-page spec, with the build log kept from the first commit.</p>
+  </section>
+
+  <section class="section wrap" id="see-it">
+    <span class="eyebrow">See it</span>
+    <div class="frame measure">
+      <video controls preload="metadata" playsinline poster="/video/listing-check-poster.jpg" width="1920" height="1080">
+        <source src="/video/listing-check-walkthrough.mp4" type="video/mp4">
+        Your browser does not play MP4 video. <a href="/video/listing-check-walkthrough.mp4">Download the walkthrough</a> instead.
+      </video>
+    </div>
+    <p class="caption">60 seconds, no audio: a flawed draft taken from a score of 70 to 96, with the AI rewrite reviewed line by line.</p>
+  </section>
+
+  <section class="section wrap" id="measured">
+    <span class="eyebrow">What was measured</span>
+    <div class="stats" role="list">
+      <div class="stat wide" role="listitem"><b>79.6 → 98.0</b><span>Mean score of the 71 flagged listings, before and after accepting every fix. 71 of 71 pass.</span></div>
+      <div class="stat" role="listitem"><b>400</b><span>Generated sample listings, 37% with planted flaws; 71 scored under 85 on first pass</span></div>
+      <div class="stat" role="listitem"><b>0 of 55</b><span>Fresh rewrites that added a fact not in the draft or the building record</span></div>
+      <div class="stat" role="listitem"><b>$0.68</b><span>Total spend on model calls for the metric run</span></div>
+    </div>
+    <div class="tablewrap measure">
+      <table>
+        <thead><tr><th>Same 20 listings through two models</th><th>Claude Opus 5</th><th>Claude Sonnet 5.5</th></tr></thead>
+        <tbody>
+          <tr><td>Rewrites that added a fact not in the input</td><td>1 of 20</td><td>0 of 20</td></tr>
+          <tr><td>Time per call, median</td><td>9.2 s</td><td>6.0 s</td></tr>
+          <tr><td>Cost per rewrite</td><td>$0.022</td><td>$0.008</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tablenote">Sonnet was as clean, a third faster and a third of the price, so it is the default. The one Opus addition was genuine: a draft that said "furnished" came back "fully furnished", which is exactly the failure the guardrail exists to catch.</p>
+  </section>
+
+  <section class="section wrap" id="wrong">
+    <span class="eyebrow">What the AI got wrong, and how it was fixed</span>
+    <div class="stories">
+      <p><b>The fact checker was wrong before the model was.</b> At run time it flagged five of the first twenty Opus rewrites. Four of those were its own fault: the drafts said "pool view" and the model wrote "looks out over the pool", which the concept matcher treated as a new pool claim. The matcher now treats a view of something as evidence the thing exists, the logged outputs were re-scored without calling the model again, and a planted test keeps the fix fixed: "pool view" in, "looks out over the pool" out, nothing flagged.</p>
+      <p><b>My benchmark rule lost to the measured one.</b> I specified a price benchmark that matched on bedrooms. Measured on the sample, it was worse than the original: clean listings wrongly flagged rose from 16% to 28%, and mispriced listings caught fell from 50 to 46 of 51. The chain that shipped compares the same building and bedrooms, then area, tier and bedrooms, then area and tier, then the whole area, because building tier was what actually separated a listing from its comparables. The spec was updated to say so.</p>
+      <p><b>The agent reported the site done while the live URL showed the old build.</b> I opened the production site and saw a white page with none of the new work. Local main was two commits ahead of origin and neither had been pushed; the report had said "done" and nothing in it said undeployed. Fixed by pushing and redeploying, then a rule went into the log: done means committed, pushed and, for anything visible, verified on the live URL. A report that stops at the commit has to say so in its first line.</p>
+    </div>
+  </section>
+
+  <section class="section wrap" id="links">
+    <span class="eyebrow">Links</span>
+    <div class="linkrow">
+      <a class="pill primary" href="https://listing-check.mattpbaker.dev" target="_blank" rel="noopener">Try it live</a>
+      <a class="pill" href="https://github.com/mattpbakerdev-oss/listing-check" target="_blank" rel="noopener">Source on GitHub</a>
+      <a class="pill" href="https://github.com/mattpbakerdev-oss/listing-check/blob/main/SPEC.md" target="_blank" rel="noopener">Spec</a>
+      <a class="pill" href="https://github.com/mattpbakerdev-oss/listing-check/blob/main/BUILD_LOG.md" target="_blank" rel="noopener">Build log</a>
+    </div>
+  </section>
+
+  <div class="back wrap"><a href="/">&larr; Back to all work</a></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="mailto:mattpbakerdev@gmail.com">mattpbakerdev@gmail.com</a>
+    <a href="https://github.com/mattpbakerdev-oss" target="_blank" rel="noopener">GitHub</a>
+    <span class="built">Built with <b>Claude Code</b> by Matt</span>
+  </div>
+</footer>
+</body>
+</html>

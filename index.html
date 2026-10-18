@@ -164,6 +164,9 @@
   .card p b { color: var(--ink); font-weight: 500; }
   .tags { display: flex; flex-wrap: wrap; gap: 8px; position: relative; z-index: 1; }
   .tags span { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--bg-raised-2); color: var(--ink-2); }
+  .card .more { position: relative; z-index: 1; font-size: 14px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; transition: color .2s; }
+  .card:hover .more { color: var(--ink); }
+  .card .more svg { width: 14px; height: 14px; color: var(--accent); }
   .ghost {
     position: absolute; right: -6px; bottom: -22px; font-size: 8.5rem; font-weight: 500; line-height: 0.8;
     letter-spacing: -0.05em; color: rgba(245,241,238,0.06); pointer-events: none; user-select: none;
@@ -254,22 +257,25 @@
   <section class="section wrap" id="work">
     <h2>work</h2>
     <div class="cards">
-      <a class="card" href="https://listing-check.mattpbaker.dev" target="_blank" rel="noopener">
+      <a class="card" href="/work/listing-check">
         <div class="card-head"><h3>Listing Check</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
         <p>A pre-publish checker for Bangkok rental agents: completeness score, price benchmark, and a guarded AI rewrite in English and Thai. <b>Flagged listings went from 79.6 to 98.0.</b></p>
         <div class="tags"><span>Next.js</span><span>TypeScript</span><span>Supabase</span><span>Vercel</span></div>
+        <span class="more">See the work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span class="ghost" aria-hidden="true">98.0</span>
       </a>
-      <a class="card" href="https://apps.apple.com/app/id6784176155" target="_blank" rel="noopener">
+      <a class="card" href="/work/up-lock">
         <div class="card-head"><h3>Up Lock</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
         <p>Blocks distracting apps until you do a set of push-ups. The camera counts reps on the phone, with an anti-cheat rule that took two tries to get right. <b>Live on the App Store.</b></p>
         <div class="tags"><span>Swift</span><span>Vision</span><span>Screen Time API</span></div>
+        <span class="more">See the work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span class="ghost" aria-hidden="true">1</span>
       </a>
-      <a class="card" href="https://github.com/mattpbakerdev-oss/ugc-shorts-pipeline" target="_blank" rel="noopener">
+      <a class="card" href="/work/ugc-pipeline">
         <div class="card-head"><h3>UGC shorts pipeline</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
         <p>Turns talking-head takes into captioned, graphic-timed shorts from a small storyboard. Built for paid content work when editing by hand stopped scaling. <b>Open source.</b></p>
         <div class="tags"><span>TypeScript</span><span>Remotion</span><span>whisper.cpp</span></div>
+        <span class="more">See the work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span class="ghost" aria-hidden="true">3</span>
       </a>
     </div>

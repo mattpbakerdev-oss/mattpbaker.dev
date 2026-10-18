@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>UGC shorts pipeline · Matt Baker</title>
+<meta name="description" content="UGC shorts pipeline: talking-head takes in, finished captioned shorts out. The published videos, what was measured, and the Whisper timing failures that each became a rule with a test.">
+<meta property="og:title" content="UGC shorts pipeline · Matt Baker">
+<meta property="og:description" content="A storyboard-driven pipeline on Remotion and whisper.cpp. 72 commits in a week, 21 test files, 27 videos and about 26,000 views in its first three weeks.">
+<meta property="og:url" content="https://mattpbaker.dev/work/ugc-pipeline">
+<meta name="theme-color" content="#120F0F">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/work/work.css">
+</head>
+<body>
+
+<header class="nav wrap">
+  <a class="wordmark" href="/">Matt Baker</a>
+  <nav class="nav-pill" aria-label="Work">
+    <a href="/work/listing-check">Listing Check</a>
+    <a href="/work/up-lock">Up Lock</a>
+    <a href="/work/ugc-pipeline" aria-current="page">UGC pipeline</a>
+  </nav>
+  <div class="nav-right">
+    <a class="pill" href="mailto:mattpbakerdev@gmail.com">Email me</a>
+  </div>
+</header>
+
+<main>
+  <section class="page-head wrap">
+    <p class="crumb"><a href="/">Work</a> / UGC shorts pipeline</p>
+    <h1>UGC shorts pipeline</h1>
+    <p class="lede"><b>Talking-head takes in, finished videos out.</b> I am paid to make short videos promoting a social media scheduler, and editing each one by hand did not scale. You write a small storyboard per video, "when I say this phrase, show this number, play this sound", and the rest is automatic: silence trimmed, colour corrected, captioned from Whisper word timings, titles and graphics placed around the face.</p>
+  </section>
+
+  <section class="section wrap" id="see-it">
+    <span class="eyebrow">See it</span>
+    <div class="outs">
+      <a class="out" href="https://youtube.com/shorts/S4q-Ie9Scps" target="_blank" rel="noopener">
+        <div class="thumb">
+          <img src="https://i.ytimg.com/vi/S4q-Ie9Scps/hqdefault.jpg" alt="" width="480" height="360" loading="lazy">
+          <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+        </div>
+        <div class="meta">
+          <div class="platform">YouTube Short <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
+          <p>Vertical short: silence trimmed, captions from word timings, graphics cued on spoken phrases.</p>
+        </div>
+      </a>
+      <a class="out" href="https://youtube.com/shorts/p9sebfN-z20" target="_blank" rel="noopener">
+        <div class="thumb">
+          <img src="https://i.ytimg.com/vi/p9sebfN-z20/hqdefault.jpg" alt="" width="480" height="360" loading="lazy">
+          <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+        </div>
+        <div class="meta">
+          <div class="platform">YouTube Short <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
+          <p>Vertical short from the same pipeline, with a different hook and storyboard.</p>
+        </div>
+      </a>
+      <a class="out noimg" href="https://www.tiktok.com/@postizwithmatt/video/7694395558743510274" target="_blank" rel="noopener">
+        <div class="meta">
+          <div class="platform">TikTok <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg></div>
+          <p>The same pipeline output, posted to TikTok.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="section wrap" id="measured">
+    <span class="eyebrow">What was measured</span>
+    <div class="stats" role="list">
+      <div class="stat" role="listitem"><b>72</b><span>Commits in a week for the October rebuild, starting with a design spec and an implementation plan</span></div>
+      <div class="stat" role="listitem"><b>21</b><span>Test files</span></div>
+      <div class="stat" role="listitem"><b>27</b><span>Videos live across TikTok, Reels, Shorts and Facebook in the first three weeks</span></div>
+      <div class="stat" role="listitem"><b>~26,000</b><span>Views in those three weeks, every video tagged by hook</span></div>
+    </div>
+    <p class="tablenote">The first version was Python and ffmpeg in September. The October rebuild on Remotion added a storyboard language, a validator that fails the build naming the missing phrase, and a retake detector.</p>
+  </section>
+
+  <section class="section wrap" id="wrong">
+    <span class="eyebrow">What the AI got wrong, and how it was fixed</span>
+    <div class="stories">
+      <p><b>The agent cut from the script, not from what I said.</b> On the first batch it cut the videos from my written script rather than the transcript, and merged "barber shops" into one word, so a cue never fired and the graphic never appeared. Cuts now come from the transcript, never the script. The validator fails the build and names the missing phrase instead of shipping a silent gap, and it rejects any "Postiz" inside a moment, so the brand cannot be amplified in graphics by accident. Cue words were changed to ones Whisper does not merge, and a caption-fixes table handles the brand names it mangles.</p>
+      <p><b>Whisper is confidently wrong about time.</b> It stretches a word across silence, so on joined audio a take's first word started inside the previous take. It hallucinates words in trailing silence, and it mis-times words that sit tight against a cut. Each take is now transcribed separately and offset onto the joined timeline. Words placed after the measured end of speech, trailing silence below -35 dB, are dropped as hallucinations. Word times are mapped through the cuts after transcription, not before.</p>
+      <p><b>Retakes had to be found before they could be cut.</b> A retake is a 3-word phrase repeated within 4 seconds. The detector reads the takes and the word timings, proposes cutting the first attempt, and prints a ready-to-paste cuts block in take-local seconds. They are proposals: each is checked against the transcript before it goes into the storyboard, and restarts that straddle a take boundary are skipped with a warning rather than guessed.</p>
+    </div>
+  </section>
+
+  <section class="section wrap" id="links">
+    <span class="eyebrow">Links</span>
+    <div class="linkrow">
+      <a class="pill primary" href="https://github.com/mattpbakerdev-oss/ugc-shorts-pipeline" target="_blank" rel="noopener">Source on GitHub</a>
+    </div>
+  </section>
+
+  <div class="back wrap"><a href="/">&larr; Back to all work</a></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="mailto:mattpbakerdev@gmail.com">mattpbakerdev@gmail.com</a>
+    <a href="https://github.com/mattpbakerdev-oss" target="_blank" rel="noopener">GitHub</a>
+    <span class="built">Built with <b>Claude Code</b> by Matt</span>
+  </div>
+</footer>
+</body>
+</html>

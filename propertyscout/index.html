@@ -90,7 +90,9 @@
   .build .media { border-bottom: 1px solid var(--line); background: var(--sunk); }
   .build .media img { display: block; width: 100%; height: auto; }
   .video { position: relative; aspect-ratio: 16 / 9; background: var(--sunk); border-bottom: 1px solid var(--line); }
-  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .video iframe, .video video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
+  .evidence { font-size: 0.88rem; }
+  .evidence a { font-weight: 600; }
   .metric { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
   .metric > div { background: var(--surface); padding: 12px 24px; display: grid; gap: 2px; }
   .metric .n { font-family: var(--display); font-stretch: 87%; font-weight: 800; font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -152,6 +154,7 @@
     <!-- 1. Listing Check -->
     <article class="build" id="listing-check">
       <div class="top">
+        <p class="evidence"><a href="/work/listing-check">Full evidence page →</a></p>
         <div class="meta"><h3>Listing Check: a pre-publish checker for Bangkok rental agents</h3><span class="stack">Next.js · Supabase · Postgres · Claude Sonnet via edge function · Claude Code</span></div>
         <p>An agent pastes a draft listing. The tool scores completeness out of 100 with per-field fixes, benchmarks the rent per square metre against comparable listings in the same building, tier and area, and offers an AI rewrite in English and Thai that may only use facts from the draft. The agent accepts each part or edits it; nothing is applied without a click. Built in four evenings from a one-page spec, with the build log kept from the first commit.</p>
         <div class="links">
@@ -162,8 +165,10 @@
         </div>
       </div>
       <div class="video">
-        <!-- VIDEO: replace VIDEO_ID with the YouTube id of the 60-second walkthrough -->
-        <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID" title="Listing Check, 60-second walkthrough" allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+        <video controls preload="metadata" playsinline poster="/video/listing-check-poster.jpg" width="1920" height="1080" title="Listing Check, 60-second walkthrough">
+          <source src="/video/listing-check-walkthrough.mp4" type="video/mp4">
+          Your browser does not play MP4 video. <a href="/video/listing-check-walkthrough.mp4">Download the walkthrough</a> instead.
+        </video>
       </div>
       <div class="body">
         <div class="wrong"><h4>What the AI got wrong</h4><p>Two things, and the second mattered more. The rewrite model turned a draft that said "furnished" into "fully furnished": a small, plausible upgrade that would start an argument on move-in day. Then my own fact checker, built to catch exactly that, was wrong first: it flagged "looks out over the pool" as an invented claim when the draft said "pool view". Four of its first five flags were false.</p></div>
@@ -185,6 +190,7 @@
     <!-- 2. Up Lock -->
     <article class="build" id="up-lock">
       <div class="top">
+        <p class="evidence"><a href="/work/up-lock">Full evidence page →</a></p>
         <div class="meta"><h3>Up Lock: exercise to unlock your apps</h3><span class="stack">Swift · SwiftUI · Vision pose detection · Family Controls · RevenueCat · Claude Code</span></div>
         <p>An iPhone app that blocks distracting apps until you do a set of push-ups, squats or jumping jacks. The camera counts reps on the phone itself, and a finished set unlocks the app for a timed window. Daily limits, streaks, stats and a subscription. Built from ten dated design specs and eighteen implementation plans; about 145 tests.</p>
         <div class="links"><a class="primary" href="https://apps.apple.com/app/id6784176155" target="_blank" rel="noopener">Live on the App Store ↗</a></div>
@@ -199,6 +205,7 @@
     <!-- 3. UGC pipeline -->
     <article class="build" id="ugc">
       <div class="top">
+        <p class="evidence"><a href="/work/ugc-pipeline">Full evidence page →</a></p>
         <div class="meta"><h3>UGC shorts pipeline: talking-head takes in, finished videos out</h3><span class="stack">TypeScript · Remotion · whisper.cpp · ffmpeg · Claude Code</span></div>
         <p>I'm paid to make short videos promoting a social media scheduler. Editing each one by hand didn't scale, so I built a pipeline: you write a small storyboard per video ("when I say this phrase, show this number, play this sound") and everything else is automatic: silence trimmed, colour corrected, captioned from Whisper word timings, titles and graphics placed around the face. The first version was Python and ffmpeg in September; the October rebuild on Remotion has a storyboard language, a validator that fails the build naming the missing phrase, a retake detector, and 21 test files. 72 commits in a week, starting with a design spec and an implementation plan.</p>
         <div class="links">

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Up Lock · Matt Baker</title>
+<meta name="description" content="Up Lock: an iPhone app that blocks distracting apps until you do a set of push-ups. What was measured, and how a pose model that does not know what a push-up is was taught to count one.">
+<meta property="og:title" content="Up Lock · Matt Baker">
+<meta property="og:description" content="Exercise to unlock your apps. On the App Store, about 145 tests, and the anti-cheat rules that took two tries to get right.">
+<meta property="og:url" content="https://mattpbaker.dev/work/up-lock">
+<meta name="theme-color" content="#120F0F">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/work/work.css">
+</head>
+<body>
+
+<header class="nav wrap">
+  <a class="wordmark" href="/">Matt Baker</a>
+  <nav class="nav-pill" aria-label="Work">
+    <a href="/work/listing-check">Listing Check</a>
+    <a href="/work/up-lock" aria-current="page">Up Lock</a>
+    <a href="/work/ugc-pipeline">UGC pipeline</a>
+  </nav>
+  <div class="nav-right">
+    <a class="pill" href="mailto:mattpbakerdev@gmail.com">Email me</a>
+  </div>
+</header>
+
+<main>
+  <section class="page-head wrap">
+    <p class="crumb"><a href="/">Work</a> / Up Lock</p>
+    <h1>Up Lock</h1>
+    <p class="lede"><b>An iPhone app that blocks distracting apps until you do a set of push-ups, squats or jumping jacks.</b> The camera counts reps on the phone itself and a finished set unlocks the app for a timed window, with daily limits, streaks, stats and a subscription. For anyone who wants their phone to cost them something.</p>
+  </section>
+
+  <section class="section wrap" id="see-it">
+    <span class="eyebrow">See it</span>
+    <!-- UPLOCK_VIDEO -->
+    <div class="sunk measure">
+      <p>Short recording of a set being counted coming soon.</p>
+      <a class="pill primary" href="https://apps.apple.com/app/id6784176155" target="_blank" rel="noopener">Download on the App Store</a>
+    </div>
+  </section>
+
+  <section class="section wrap" id="measured">
+    <span class="eyebrow">What was measured</span>
+    <div class="stats" role="list">
+      <div class="stat" role="listitem"><b>~145</b><span>Tests, each anti-cheat rule with one of its own</span></div>
+      <div class="stat" role="listitem"><b>10 + 18</b><span>Dated design specs and implementation plans written before the code</span></div>
+      <div class="stat" role="listitem"><b>0.35 / 0.70</b><span>Hysteresis thresholds on the elbow signal: a rep must drop below one and rise above the other</span></div>
+      <div class="stat" role="listitem"><b>10,000</b><span>Views passed in the first week, from four TikTok posts a day</span></div>
+    </div>
+    <div class="tablewrap measure">
+      <table>
+        <thead><tr><th>Anti-cheat rule</th><th>Test that pins it</th></tr></thead>
+        <tbody>
+          <tr><td>Standing in front of the phone and waving is not a push-up</td><td><code>pushupStandingFakeIsRejected</code></td></tr>
+          <tr><td>A real push-up counts even when the hips are out of frame</td><td><code>pushupArmsOnlyNoHipsCountsTheRep</code></td></tr>
+          <tr><td>Jitter inside the dead band never flips the counter</td><td><code>deadBandJitterDoesNotCount</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap" id="wrong">
+    <span class="eyebrow">What the AI got wrong, and how it was fixed</span>
+    <div class="stories">
+      <p><b>The pose model does not know what a push-up is.</b> Apple's Vision model gives you joints, not exercises, so the first version counted anything that bent an elbow, including standing in front of the phone and waving. A rep is now defined in terms the model understands: elbow angle mapped to a 0 to 1 signal, which has to drop below 0.35 and rise above 0.70, with a dead band in between so jitter cannot flip it and a half-second floor so a twitch cannot double count.</p>
+      <p><b>The first anti-cheat rule overcorrected.</b> To prove you were horizontal it required the hips to be visible. Real push-ups then stopped counting, because when the phone is on the floor your legs are out of frame. Fixed on 25 June: standing is rejected only when a visible cue positively shows it, a torso near vertical or a nose well above the shoulders, and never because a joint is missing. The rule that broke real reps became the test <code>pushupArmsOnlyNoHipsCountsTheRep</code>.</p>
+      <p><b>Each rule has a test, named for the thing it stops.</b> <code>pushupStandingFakeIsRejected</code>, <code>pushupArmsOnlyNoHipsCountsTheRep</code> and <code>deadBandJitterDoesNotCount</code> pin the three rules above, so a change to the counter that re-breaks one of them fails before it ships. Rep counting runs on the phone and nothing is uploaded.</p>
+    </div>
+  </section>
+
+  <section class="section wrap" id="links">
+    <span class="eyebrow">Links</span>
+    <div class="linkrow">
+      <a class="pill primary" href="https://apps.apple.com/app/id6784176155" target="_blank" rel="noopener">Live on the App Store</a>
+    </div>
+    <p class="tablenote">The repository is private.</p>
+  </section>
+
+  <div class="back wrap"><a href="/">&larr; Back to all work</a></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="mailto:mattpbakerdev@gmail.com">mattpbakerdev@gmail.com</a>
+    <a href="https://github.com/mattpbakerdev-oss" target="_blank" rel="noopener">GitHub</a>
+    <span class="built">Built with <b>Claude Code</b> by Matt</span>
+  </div>
+</footer>
+</body>
+</html>
