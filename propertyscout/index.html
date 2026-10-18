@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Matt Baker for PropertyScout</title>
+<meta name="description" content="Application for the AI-Native Product Owner role at PropertyScout: three things built with AI coding agents, what the AI got wrong, and how it was fixed.">
+<meta name="robots" content="noindex">
+<meta property="og:title" content="Matt Baker for PropertyScout">
+<meta property="og:description" content="Listing Check, a pre-publish tool for Bangkok rental agents, plus two more builds with the AI failures and fixes documented.">
+<meta property="og:image" content="https://mattpbaker.dev/propertyscout/img/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87,600;87,800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F4F5F1; --surface: #FFFFFF; --sunk: #E9EBE4;
+    --ink: #17201D; --ink-2: #48534F; --ink-3: #7A847F; --line: #D7DBD2;
+    --accent: #1F6F78; --accent-ink: #185A61; --accent-soft: #DFEEF0;
+    --marker: #F2CB3A; --marker-soft: #FBF0C4;
+    --good: #23774A; --good-soft: #DDEFE4; --warn: #9A6200; --warn-soft: #F8EBCB;
+    --display: "Archivo", "Arial Narrow", Arial, sans-serif;
+    --body: "Manrope", "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15191C; --surface: #1C2226; --sunk: #242B30;
+      --ink: #EDF1EE; --ink-2: #B7C0BB; --ink-3: #85908A; --line: #30393E;
+      --accent: #5FC4CE; --accent-ink: #8ADDE5; --accent-soft: #163A3E;
+      --marker: #E8C440; --marker-soft: #3A3315;
+      --good: #74D29C; --good-soft: #1A3527; --warn: #EDB35A; --warn-soft: #3A2D14;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15191C; --surface: #1C2226; --sunk: #242B30;
+    --ink: #EDF1EE; --ink-2: #B7C0BB; --ink-3: #85908A; --line: #30393E;
+    --accent: #5FC4CE; --accent-ink: #8ADDE5; --accent-soft: #163A3E;
+    --marker: #E8C440; --marker-soft: #3A3315;
+    --good: #74D29C; --good-soft: #1A3527; --warn: #EDB35A; --warn-soft: #3A2D14;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16.5px; line-height: 1.6; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; }
+  a { color: var(--accent-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:focus-visible { outline: 2px solid var(--marker); outline-offset: 2px; }
+  h1, h2, h3 { font-family: var(--display); font-stretch: 87%; margin: 0; text-wrap: balance; }
+  h1 { font-size: clamp(2.6rem, 7vw, 4.6rem); font-weight: 800; line-height: 0.95; letter-spacing: -0.015em; }
+  h2 { font-size: clamp(1.6rem, 3.6vw, 2.3rem); font-weight: 800; line-height: 1.05; }
+  h3 { font-size: 1.35rem; font-weight: 800; line-height: 1.15; }
+  p { margin: 0; max-width: 66ch; }
+  .eyebrow { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  mark { background: linear-gradient(transparent 55%, var(--marker-soft) 55%); color: inherit; padding: 0 2px; }
+
+  header { padding-block: 52px 36px; display: grid; gap: 18px; border-bottom: 1px solid var(--line); }
+  .role { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); }
+  .role .tag { background: var(--accent-soft); color: var(--accent-ink); padding: 3px 8px; border-radius: 3px; }
+  .pitch { font-size: 1.2rem; line-height: 1.5; color: var(--ink-2); max-width: 60ch; }
+  .pitch strong { color: var(--ink); font-weight: 600; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 6px; }
+  .facts > div { background: var(--surface); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+  .facts .n { font-family: var(--display); font-stretch: 87%; font-weight: 800; font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .facts .s { font-size: 0.86rem; color: var(--ink-2); }
+
+  section { padding-block: 52px; border-bottom: 1px solid var(--line); }
+  .head { display: grid; gap: 10px; margin-bottom: 26px; }
+  .head p { color: var(--ink-2); }
+
+  .build { background: var(--surface); border: 1px solid var(--line); margin-bottom: 18px; display: grid; }
+  .build .top { padding: 22px 24px 18px; display: grid; gap: 10px; border-bottom: 1px solid var(--line); }
+  .build .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+  .build .stack { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-3); letter-spacing: 0.04em; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .links a { font-size: 0.88rem; font-weight: 600; text-decoration: none; border: 1px solid var(--accent); color: var(--accent-ink); padding: 6px 12px; border-radius: 4px; }
+  .links a.primary { background: var(--accent); color: #fff; }
+  .links a:hover { background: var(--accent-soft); }
+  .links a.primary:hover { background: var(--accent-ink); }
+  .links .note { font-size: 0.85rem; color: var(--ink-3); align-self: center; }
+  .build .body { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .build .body > div { padding: 18px 24px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+  .build .body > div + div { border-left: 1px solid var(--line); }
+  @media (max-width: 720px) { .build .body > div + div { border-left: none; border-top: 1px solid var(--line); } }
+  .build h4 { margin: 0; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  .build .body p { font-size: 0.93rem; color: var(--ink-2); }
+  .build .wrong { background: var(--marker-soft); }
+  .build .wrong h4 { color: var(--warn); }
+  .build .result { padding: 12px 24px; font-size: 0.92rem; font-weight: 600; color: var(--good); background: var(--good-soft); }
+  .build .media { border-bottom: 1px solid var(--line); background: var(--sunk); }
+  .build .media img { display: block; width: 100%; height: auto; }
+  .video { position: relative; aspect-ratio: 16 / 9; background: var(--sunk); border-bottom: 1px solid var(--line); }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .metric { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+  .metric > div { background: var(--surface); padding: 12px 24px; display: grid; gap: 2px; }
+  .metric .n { font-family: var(--display); font-stretch: 87%; font-weight: 800; font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .metric .s { font-size: 0.82rem; color: var(--ink-3); }
+
+  .loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .loop > div { background: var(--surface); border: 1px solid var(--line); padding: 18px; display: grid; gap: 8px; align-content: start; }
+  .loop .step { font-family: var(--mono); font-size: 0.72rem; color: var(--accent-ink); letter-spacing: 0.06em; text-transform: uppercase; }
+  .loop p { font-size: 0.92rem; color: var(--ink-2); }
+
+  .tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; background: var(--sunk); }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; min-width: 190px; }
+  td { color: var(--ink-2); }
+  .st { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+  .st.yes { background: var(--good-soft); color: var(--good); }
+  .st.part { background: var(--warn-soft); color: var(--warn); }
+
+  .more { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .more > div { border-top: 2px solid var(--ink); padding-top: 12px; display: grid; gap: 6px; align-content: start; }
+  .more p { font-size: 0.92rem; color: var(--ink-2); }
+
+  .bg { display: grid; gap: 0; }
+  .bg .row { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 16px; padding-block: 14px; border-top: 1px solid var(--line); }
+  .bg .row:first-child { border-top: none; }
+  .bg .when { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); padding-top: 3px; }
+  .bg p { font-size: 0.93rem; color: var(--ink-2); margin-top: 3px; }
+  @media (max-width: 600px) { .bg .row { grid-template-columns: 1fr; gap: 2px; } }
+
+  footer { padding-block: 40px 64px; display: grid; gap: 10px; }
+  footer p { color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="role"><span class="tag">Application</span><span>AI-Native Product Owner · Level B (Junior) · PropertyScout, Bangkok</span></div>
+  <h1>Matt Baker</h1>
+  <p class="pitch">I'm a product builder who ships with AI coding agents. For two years I've scoped things, built them with Claude Code, checked what the agent got wrong and fixed it. <strong>Since reading your listing I built a tool for your agents: a pre-publish checker for Bangkok rental listings, live and measured.</strong> I also have an app on the App Store and a video pipeline that produces paid content, and I spend a lot of time talking to customers, which is the part of your loop most builders skip.</p>
+  <div class="facts">
+    <div><span class="eyebrow">Built for you</span><span class="n">Listing Check</span><span class="s">Live at listing-check.mattpbaker.dev</span></div>
+    <div><span class="eyebrow">Measured</span><span class="n">79.6 → 98.0</span><span class="s">Mean score of flagged listings, before and after</span></div>
+    <div><span class="eyebrow">Shipped</span><span class="n">Up Lock</span><span class="s">iOS app, live on the App Store</span></div>
+    <div><span class="eyebrow">Degree</span><span class="n">First Class</span><span class="s">BA (Hons) Business, UWE Bristol, 2026</span></div>
+  </div>
+</header>
+
+<section id="builds">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">You asked for links to 1 to 3 things built with AI</span>
+      <h2>What I built, what the AI got wrong, how I fixed it</h2>
+      <p>Each one is something I scoped, directed and checked myself. The yellow panel is the answer to your second application question. Every link is public.</p>
+    </div>
+
+    <!-- 1. Listing Check -->
+    <article class="build" id="listing-check">
+      <div class="top">
+        <div class="meta"><h3>Listing Check: a pre-publish checker for Bangkok rental agents</h3><span class="stack">Next.js · Supabase · Postgres · Claude Sonnet via edge function · Claude Code</span></div>
+        <p>An agent pastes a draft listing. The tool scores completeness out of 100 with per-field fixes, benchmarks the rent per square metre against comparable listings in the same building, tier and area, and offers an AI rewrite in English and Thai that may only use facts from the draft. The agent accepts each part or edits it; nothing is applied without a click. Built in four evenings from a one-page spec, with the build log kept from the first commit.</p>
+        <div class="links">
+          <a class="primary" href="https://listing-check.mattpbaker.dev" target="_blank" rel="noopener">Try it live ↗</a>
+          <a href="https://github.com/mattpbakerdev-oss/listing-check" target="_blank" rel="noopener">Source on GitHub ↗</a>
+          <a href="https://github.com/mattpbakerdev-oss/listing-check/blob/main/BUILD_LOG.md" target="_blank" rel="noopener">Build log ↗</a>
+          <a href="https://github.com/mattpbakerdev-oss/listing-check/blob/main/SPEC.md" target="_blank" rel="noopener">Spec ↗</a>
+        </div>
+      </div>
+      <div class="video">
+        <!-- VIDEO: replace VIDEO_ID with the YouTube id of the 60-second walkthrough -->
+        <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID" title="Listing Check, 60-second walkthrough" allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+      </div>
+      <div class="body">
+        <div class="wrong"><h4>What the AI got wrong</h4><p>Two things, and the second mattered more. The rewrite model turned a draft that said "furnished" into "fully furnished": a small, plausible upgrade that would start an argument on move-in day. Then my own fact checker, built to catch exactly that, was wrong first: it flagged "looks out over the pool" as an invented claim when the draft said "pool view". Four of its first five flags were false.</p></div>
+        <div><h4>How I fixed it</h4><p>The checker was fixed before the model was blamed: a view of something now implies the thing exists, with tests for both cases. The genuine catch stayed caught. I then ran the same 20 listings through Opus and Sonnet and compared added facts, time and cost: Sonnet was as clean, a third faster and a third of the price, so it's the default. Every rewrite is logged with its added-facts list.</p></div>
+      </div>
+      <div class="body">
+        <div><h4>Spec mistakes the build caught</h4><p>The spec I wrote had a threshold that contradicted itself, a building count that was wrong, a SQL round() that wouldn't compile, and a metric target I'd guessed without looking at the data. The log records each one, who caught it, and the fix. My first benchmark rule was also worse than the agent's alternative when measured, so the measured one shipped.</p></div>
+        <div><h4>Decisions I'd defend</h4><p>Sample data generated from public market medians rather than scraping anyone's listings, with every anchor sourced. A map preview considered and rejected in favour of a building card that tells the agent what the benchmark is comparing against. Rate limiting and a hashed IP before the URL went public. A marketing checklist reviewed and mostly skipped, because this is an internal tool.</p></div>
+      </div>
+      <div class="metric">
+        <div><span class="n">400</span><span class="s">sample listings, 37% with planted flaws</span></div>
+        <div><span class="n">71</span><span class="s">flagged under 85 on first pass</span></div>
+        <div><span class="n">79.6 → 98.0</span><span class="s">mean score after accepting every fix; 71 of 71 pass</span></div>
+        <div><span class="n">0 of 55</span><span class="s">fresh rewrites that added a fact not in the draft</span></div>
+      </div>
+      <div class="result">Live, phone-first, 260+ tests, with a build log that records six things that went wrong and how each was fixed. The four steps in your job description, done once at small scale.</div>
+    </article>
+
+    <!-- 2. Up Lock -->
+    <article class="build" id="up-lock">
+      <div class="top">
+        <div class="meta"><h3>Up Lock: exercise to unlock your apps</h3><span class="stack">Swift · SwiftUI · Vision pose detection · Family Controls · RevenueCat · Claude Code</span></div>
+        <p>An iPhone app that blocks distracting apps until you do a set of push-ups, squats or jumping jacks. The camera counts reps on the phone itself, and a finished set unlocks the app for a timed window. Daily limits, streaks, stats and a subscription. Built from ten dated design specs and eighteen implementation plans; about 145 tests.</p>
+        <div class="links"><a class="primary" href="https://apps.apple.com/app/id6784176155" target="_blank" rel="noopener">Live on the App Store ↗</a></div>
+      </div>
+      <div class="body">
+        <div class="wrong"><h4>What the AI got wrong</h4><p>Apple's pose model gives you joints, not exercises. It has no idea what a push-up is, so the first version counted anything that bent an elbow, including standing in front of the phone and waving. My first anti-cheat rule then overcorrected: it required the hips to be visible to prove you were horizontal, and real push-ups stopped counting because your legs are out of frame when the phone is on the floor.</p></div>
+        <div><h4>How I fixed it</h4><p>A rep is now defined in terms the model understands: elbow angle mapped to a 0 to 1 signal, which has to drop below 0.35 and rise above 0.70, with a dead band in between so jitter can't flip it and a half-second floor so a twitch can't double count. Standing is rejected only when a visible cue positively shows it (torso near vertical, or nose well above the shoulders), never because a joint is missing. Each rule has a test: <code>pushupStandingFakeIsRejected</code>, <code>pushupArmsOnlyNoHipsCountsTheRep</code>, <code>deadBandJitterDoesNotCount</code>.</p></div>
+      </div>
+      <div class="result">Rep counting runs on the phone and nothing is uploaded. Marketed with four TikTok posts a day, it passed 10,000 views in its first week.</div>
+    </article>
+
+    <!-- 3. UGC pipeline -->
+    <article class="build" id="ugc">
+      <div class="top">
+        <div class="meta"><h3>UGC shorts pipeline: talking-head takes in, finished videos out</h3><span class="stack">TypeScript · Remotion · whisper.cpp · ffmpeg · Claude Code</span></div>
+        <p>I'm paid to make short videos promoting a social media scheduler. Editing each one by hand didn't scale, so I built a pipeline: you write a small storyboard per video ("when I say this phrase, show this number, play this sound") and everything else is automatic: silence trimmed, colour corrected, captioned from Whisper word timings, titles and graphics placed around the face. The first version was Python and ffmpeg in September; the October rebuild on Remotion has a storyboard language, a validator that fails the build naming the missing phrase, a retake detector, and 21 test files. 72 commits in a week, starting with a design spec and an implementation plan.</p>
+        <div class="links">
+          <a class="primary" href="https://github.com/mattpbakerdev-oss/ugc-shorts-pipeline" target="_blank" rel="noopener">Source on GitHub ↗</a>
+          <a href="https://youtube.com/shorts/S4q-Ie9Scps" target="_blank" rel="noopener">Output: Short ↗</a>
+          <a href="https://youtube.com/shorts/p9sebfN-z20" target="_blank" rel="noopener">Output: Short ↗</a>
+          <a href="https://www.tiktok.com/@postizwithmatt/video/7694395558743510274" target="_blank" rel="noopener">Output: TikTok ↗</a>
+        </div>
+      </div>
+      <div class="body">
+        <div class="wrong"><h4>What the AI got wrong</h4><p>Whisper is confidently wrong about time. It stretches a word across silence, so on joined audio a take's first word started inside the previous take. It hallucinates words in trailing silence. It mis-times words that sit tight against a cut. And on the first batch, the agent cut the videos from my script rather than from what I actually said, and merged "barber shops" into one word so a cue never fired.</p></div>
+        <div><h4>How I fixed it</h4><p>Each take is transcribed separately and offset onto the joined timeline. Words placed after the measured end of speech are dropped as hallucinations. Word times are mapped through the cuts after transcription, not before. Cuts come from the transcript, never the script. Cue words were changed to ones Whisper doesn't merge, and a caption-fixes table handles the brand names it mangles. Each failure became a rule with a test.</p></div>
+      </div>
+      <div class="result">27 videos live across TikTok, Reels, Shorts and Facebook in the first three weeks, about 26,000 views, every one tagged by hook so I know which to make more of.</div>
+    </article>
+  </div>
+</section>
+
+<section id="loop">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Your four responsibilities</span>
+      <h2>I already work in your loop</h2>
+      <p>Discovery, spec, build, measure. Listing Check did all four in one project, in your domain. The others show the same habit at smaller scale.</p>
+    </div>
+    <div class="loop">
+      <div><span class="step">1 · Discovery &amp; validation</span><h3>Pick a real problem, check the data</h3><p>Listing Check started with the question "what does an agent get wrong fifty times a day?", not with a feature. Two years on a shop floor asking people what they need before selling them anything. I call small business owners myself. The florist lead-list mistake (below) is why I check ground truth before building.</p></div>
+      <div><span class="step">2 · Specification</span><h3>One page, then build</h3><p>Listing Check, Up Lock and the video pipeline each began with a written spec and plan before any code: user, scope, rules, metric, what's out. The specs had mistakes; the logs show them being caught. A spec that's never wrong hasn't been tested.</p></div>
+      <div><span class="step">3 · Build with agents</span><h3>Direct, review, decide</h3><p>I assign the agent work, read every plan before it builds, and don't accept code I can't explain. When it reached for Docker or a map I said no and wrote down why. When it caught my mistakes, that went in the log too. I keep humans in the loop where mistakes are expensive: nothing from the AI rewrite is applied without a click.</p></div>
+      <div><span class="step">4 · Measure &amp; iterate</span><h3>Numbers decide</h3><p>The benchmark rule was tested three ways and my intuition lost. The price verdict bands were softened after measuring that one in three fair prices got questioned. The rewrite model was chosen on a 20-listing comparison. The headline metric was measured, not claimed: 71 flagged listings, 79.6 to 98.0.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="requirements">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Your requirements, line by line</span>
+      <h2>Where I match, and where I don't yet</h2>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>You ask for</th><th>Match</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td>Hands-on proof of building with AI, with links</td><td><span class="st yes">Strong</span></td><td>Three public links above: a live tool in your domain, an App Store app, a public pipeline repo with its output.</td></tr>
+          <tr><td>Deep understanding of AI, including its limits and failure risks</td><td><span class="st yes">Strong</span></td><td>Every build above has a documented AI failure I caught and designed around: invented facts, a checker that was itself wrong, a pose model that doesn't know what a push-up is, a transcriber that lies about time.</td></tr>
+          <tr><td>How software works: APIs, data models, dependencies</td><td><span class="st yes">Strong</span></td><td>Listing Check: Postgres schema with views and a benchmark function, row-level security, edge functions, rate limiting, migrations. Elsewhere: Google Places, YouTube, Instagram and Facebook APIs, Vision and Family Controls on iOS.</td></tr>
+          <tr><td>Analytical, strong with numbers, large spreadsheets, SQL</td><td><span class="st yes">Good</span></td><td>The price benchmark is a SQL median over comparables with a fallback chain. The metric was computed over 400 rows. A price-arbitrage model over two weeks of history across several marketplaces. Two years measured weekly on UPT, ATV and sales per hour.</td></tr>
+          <tr><td>Excellent English, ownership, fast and structured</td><td><span class="st yes">Strong</span></td><td>Native English. Listing Check went from spec to public URL in four evenings with a log you can audit. I built the operating system a 14-person university business ran on for a year.</td></tr>
+          <tr><td>Level B: strong academics, quantitative field</td><td><span class="st part">Partly</span></td><td>First Class Honours, in Business rather than a quantitative subject. The numbers work lives in the projects.</td></tr>
+          <tr><td>Level B: side hustles, university projects</td><td><span class="st yes">Strong</span></td><td>An App Store app, paid content work with its own tooling, a website sales business, and a three-year degree run as a real company.</td></tr>
+          <tr><td>Good to have: Make, n8n, no-code automation</td><td><span class="st yes">Yes</span></td><td>Zapier, Make and n8n from my degree; Claude Code scripts and edge functions day to day.</td></tr>
+          <tr><td>Good to have: real estate or CRM domain</td><td><span class="st yes">Yes</span></td><td>Listing Check is built on Bangkok rental data with real buildings and stations. Earlier: a working landlord and property management site, and my own CRM-style calling pipeline.</td></tr>
+          <tr><td>Thai language</td><td><span class="st part">Learning</span></td><td>Not yet. I'm learning with a tutor app I built, and Listing Check already produces Thai output. I'm moving to Bangkok to live there.</td></tr>
+          <tr><td>Right to work in Thailand</td><td></td><td>British citizen. I'd need the BOI work permit you offer, and I'm ready to relocate to Bangkok.</td></tr>
+          <tr><td>English level</td><td></td><td>Native speaker, written and spoken.</td></tr>
+          <tr><td>Product Owner experience</td><td></td><td>No years with that title. About two years owning my own products from idea to launch to measurement, as shown above.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="more">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Also built</span>
+      <h2>Earlier projects</h2>
+    </div>
+    <div class="more">
+      <div><h3>Lead pipeline and calling console</h3><p>Every flower shop in Bristol from the Google Places API, scored A/B/C, with a phone-first calling console. The AI's first attempt at the list from web research looked perfect and was wrong (closed shops, dead numbers), so I gave it a source of truth instead and kept the model for scoring. 117 leads in an afternoon. Shown on a call; it holds real phone numbers.</p></div>
+      <div><h3>TikTok posting automation</h3><p>Claude Code driving Chrome to publish 112 generated carousel posts. It pasted captions in one go and TikTok silently dropped every hashtag, because tags only register when typed and picked. Coached through the first post, then unattended after several clean runs. 50-plus posts in 30 minutes.</p></div>
+      <div><h3>Price arbitrage tool</h3><p>Scheduled scrapers across several marketplaces into Supabase, a stability score from two weeks of price history, and a dashboard of projected profit. About 20% return on the first two trades it rated high probability. Buying and selling kept manual on purpose.</p></div>
+      <div><h3>Property management site</h3><p>A working landlord and property management site. It worked; I chose not to take it to market. The closest thing I'd built to your domain before Listing Check.</p></div>
+      <div><h3>Performance dashboard</h3><p>Pulls YouTube, Instagram and Facebook stats through their APIs, plus TikTok from my profile, so I can see views, reach and watch time by hook in one place.</p></div>
+      <div><h3>News bias comparer</h3><p>My first build: the same story compared across outlets. The back end failed the first time, so I rebuilt it back end first. That taught me to build the data layer before the screens, which is how Listing Check was built.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="background">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Background</span>
+      <h2>Where the rest of me comes from</h2>
+    </div>
+    <div class="bg">
+      <div class="row"><span class="when">Sep 2026 →</span><div><strong>Founder, Up Lock · Paid UGC creator, Postiz · Listing Check</strong><p>App on the App Store; short-form video for a SaaS brand, from scripting and filming to the pipeline and the numbers; a product tool built for this application.</p></div></div>
+      <div class="row"><span class="when">2024 → now</span><div><strong>Sales Associate, Skechers UK</strong><p>Measured weekly on units per transaction, average transaction value and sales per hour. Consistently near the top of the leaderboard, Employee of the Quarter. Introduced a floor-zoning fix that cut re-shelving by about 40 minutes on busy days.</p></div></div>
+      <div class="row"><span class="when">2023 → 2026</span><div><strong>BA (Hons) Business and Team Entrepreneurship, First Class · UWE Bristol</strong><p>Three years running a 14-person team as a company. Built the Notion system the team ran on for a year, won the client project award, co-ran two 400-person events.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span class="eyebrow">Matt Baker · UK, relocating to Bangkok · mattpbakerdev@gmail.com</span>
+  <p>Thanks for reading. I'd be glad to walk through any of these live, and happy to do a short build task to show how I work with agents.</p>
+</footer>
+
+</body>
+</html>
