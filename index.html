@@ -329,7 +329,11 @@
           <figcaption>Bristol, the degree</figcaption>
         </figure>
         <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: the desk"></div><figcaption>the desk, the specs</figcaption></figure>
-        <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: Bangkok"></div><figcaption>Bangkok, next</figcaption></figure>
+        <figure class="polaroid">
+          <img class="polaroid-media" src="/img/about/bangkok.jpg" width="1200" height="900"
+               alt="Me at Wat Arun in Bangkok, the white prang behind me" loading="lazy">
+          <figcaption>Bangkok, next</figcaption>
+        </figure>
       </div>
       <div class="about-text">
         <p><b>Business graduate from Bristol,</b> now relocating to Bangkok. I came to building through the product side: writing the spec, deciding what to measure, and then finding that AI coding agents meant I could ship the thing myself.</p>
@@ -357,7 +361,7 @@
 <script>
   (function () {
     var rm = window.matchMedia('(prefers-reduced-motion: reduce)');
-    var loop = document.querySelector('.polaroid-media');
+    var loop = document.querySelector('video.polaroid-media');
     var btn = document.querySelector('.polaroid-play');
     if (!loop || !btn) return;
     function reflect() {
