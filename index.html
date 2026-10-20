@@ -194,7 +194,13 @@
   .polaroid:nth-child(1) { --r: -4deg; justify-self: start; z-index: 1; }
   .polaroid:nth-child(2) { --r: 0deg; --y: -16px; justify-self: center; z-index: 3; }
   .polaroid:nth-child(3) { --r: 3deg; justify-self: end; z-index: 2; }
-  .polaroid .ph { aspect-ratio: 4 / 3; border-radius: 2px; background: linear-gradient(135deg, #3a2e2c, #241c1c); }
+  .polaroid .ph, .polaroid .polaroid-media, .polaroid .polaroid-still { display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 2px; background: linear-gradient(135deg, #3a2e2c, #241c1c); }
+  .polaroid .polaroid-media, .polaroid .polaroid-still { object-fit: cover; height: auto; }
+  .polaroid .polaroid-still { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .polaroid .polaroid-media { display: none; }
+    .polaroid .polaroid-still { display: block; }
+  }
   .polaroid figcaption { font-family: var(--hand); font-size: 1.15rem; line-height: 1.2; padding: 10px 4px 6px; }
   .about-text p { margin: 0 0 16px; color: var(--ink-2); max-width: 52ch; }
   .about-text p b { color: var(--ink); font-weight: 500; }
@@ -302,7 +308,15 @@
     <h2>about</h2>
     <div class="about-grid">
       <div class="polaroids">
-        <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: Bristol"></div><figcaption>Bristol, the degree</figcaption></figure>
+        <figure class="polaroid">
+          <video class="polaroid-media" autoplay muted loop playsinline preload="metadata"
+                 poster="/img/about/bristol-poster.jpg"
+                 aria-label="Walking across the stage at my UWE Bristol graduation">
+            <source src="/img/about/bristol-loop.mp4" type="video/mp4">
+          </video>
+          <img class="polaroid-still" src="/img/about/bristol-poster.jpg" width="800" height="600" alt="Walking across the stage at my UWE Bristol graduation">
+          <figcaption>Bristol, the degree</figcaption>
+        </figure>
         <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: the desk"></div><figcaption>the desk, the specs</figcaption></figure>
         <figure class="polaroid"><div class="ph" role="img" aria-label="Photo placeholder: Bangkok"></div><figcaption>Bangkok, next</figcaption></figure>
       </div>
@@ -330,6 +344,12 @@
 </footer>
 
 <script>
+  (function () {
+    var rm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var loop = document.querySelector('.polaroid-media');
+    function settle() { if (!loop) return; if (rm.matches) { loop.pause(); loop.removeAttribute('autoplay'); } else if (loop.paused) { loop.play().catch(function () {}); } }
+    settle(); if (rm.addEventListener) rm.addEventListener('change', settle);
+  })();
   (function () {
     var links = Array.prototype.slice.call(document.querySelectorAll('[data-spy]'));
     var map = {};
