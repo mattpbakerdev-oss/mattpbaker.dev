@@ -3,7 +3,6 @@
   --bg: #120F0F;
   --bg-raised: #1C1717;
   --bg-raised-2: #262020;
-  --bg-sunk: #0D0A0A;
   --glow: #6B1A1A;
   --accent: #E0A94A;
   --ink: #F5F1EE;
@@ -115,13 +114,19 @@ h1::after { content: "."; color: var(--accent); }
 .frame video { width: 100%; aspect-ratio: 16 / 9; height: auto; background: #000; }
 .caption { margin: 14px 0 0; color: var(--ink-2); font-size: 0.95rem; max-width: 70ch; }
 
-/* Sunk placeholder panel */
-.sunk {
-  background: var(--bg-sunk); border: 1px dashed var(--line); border-radius: var(--radius-card);
-  padding: 40px 28px; display: grid; gap: 18px; justify-items: start;
-  box-shadow: inset 0 2px 12px rgba(0,0,0,0.45);
+/* Screenshot strip */
+.shots {
+  display: flex; gap: 16px; overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scroll-padding-left: 0; padding-bottom: 14px;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+  -webkit-overflow-scrolling: touch;
 }
-.sunk p { margin: 0; color: var(--ink-2); max-width: 48ch; }
+.shots img {
+  flex: 0 0 220px; width: 220px; height: auto; scroll-snap-align: start;
+  border-radius: var(--radius-card); border: 1px solid var(--line); background: var(--bg-raised);
+}
+@media (max-width: 720px) { .shots img { flex-basis: 70vw; width: 70vw; } }
+.caption .pill { text-decoration: none; margin-top: 8px; }
 
 /* Stats */
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin: 0 0 28px; }
