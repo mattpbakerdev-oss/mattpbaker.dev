@@ -70,6 +70,9 @@
     position: sticky; top: 0; z-index: 20;
     display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
     padding-top: 20px; padding-bottom: 20px;
+  }
+  .nav::before {
+    content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
     background: rgba(18,15,15,0.82); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   }
   .wordmark { font-family: var(--serif); font-size: 1.4rem; letter-spacing: 0.02em; line-height: 1; }
@@ -134,9 +137,13 @@
   }
   @media (max-width: 900px) {
     .hero { min-height: 0; row-gap: 48px; }
-    .hero-photo { right: calc(-1 * var(--gutter)); left: calc(-1 * var(--gutter)); top: -120px; bottom: auto; height: 70vh; opacity: 0.24;
-      -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%); }
-    .hero-photo img { object-position: 78% 18%; }
+    .hero { grid-template-rows: auto auto auto; row-gap: 0; }
+    .hero-grid { order: 1; }
+    .hero-photo { order: 2; position: relative; inset: auto; left: 20%; height: 230px; margin: -36px calc(-1 * var(--gutter)) -28px 0; opacity: 0.6; width: calc(80% + var(--gutter));
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 40%), linear-gradient(to bottom, transparent 0%, #000 22%, #000 70%, transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0%, #000 40%), linear-gradient(to bottom, transparent 0%, #000 22%, #000 70%, transparent 100%); }
+    .hero-photo img { object-position: 58% 10%; }
+    .stats { order: 3; }
     .hero::before { width: 900px; height: 900px; right: -420px; top: -300px; }
     .hero-grid { padding-top: 24px; }
   }
