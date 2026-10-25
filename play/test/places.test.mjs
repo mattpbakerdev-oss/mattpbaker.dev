@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PLACES, KINDS, RING_RADIUS, ringCentre, footprintRect } from '../js/places.js';
-import { PLOT_HALF, ROADS, PLAZA, RAMPS, START } from '../js/layout.js';
+import { PLOT_HALF, ROADS, PLAZA, RAMPS, START, WELCOME_SIGN } from '../js/layout.js';
 import { circleOverlapsRect, rectsOverlap, rampFootprint } from '../js/physics.js';
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -115,4 +115,41 @@ test('the start point is in the centre square, on the plot', () => {
 test('copy has no em dashes', () => {
   const text = JSON.stringify(PLACES);
   assert.ok(!text.includes('—'), 'em dash found');
+});
+
+test('the UGC panel leads with the write-up, GitHub second', () => {
+  const ugc = PLACES.find((p) => p.id === 'ugc-pipeline');
+  const primary = ugc.links.filter((l) => l.primary);
+  assert.equal(primary.length, 1);
+  assert.equal(primary[0].label, 'Read the full write-up');
+  assert.equal(ugc.links[0], primary[0]);
+  assert.equal(ugc.links[1].label, 'Source on GitHub');
+});
+
+test('the post office shows the email address as text', () => {
+  const po = PLACES.find((p) => p.id === 'post-office');
+  assert.equal(po.email, 'mattpbakerdev@gmail.com');
+});
+
+test('every building and ring sits inside the rounded plot', async () => {
+  const { plotDistance } = await import('../js/physics.js');
+  for (const place of PLACES) {
+    const r = footprintRect(place);
+    for (const [x, z] of [[r.x - r.w / 2, r.z - r.d / 2], [r.x + r.w / 2, r.z - r.d / 2], [r.x - r.w / 2, r.z + r.d / 2], [r.x + r.w / 2, r.z + r.d / 2]]) {
+      assert.ok(plotDistance(x, z) < -2, `${place.id} corner ${x},${z}`);
+    }
+  }
+});
+
+test('the car starts facing the welcome sign, with a project building beyond it', () => {
+  const off = (x, z) => Math.abs(Math.atan2(Math.sin(Math.atan2(x - START.x, z - START.z) - START.heading), Math.cos(Math.atan2(x - START.x, z - START.z) - START.heading)));
+  const deg = (r) => (r * 180) / Math.PI;
+  assert.ok(deg(off(WELCOME_SIGN.x, WELCOME_SIGN.z)) < 25, 'sign ahead');
+  // The sign's face (its local +z) turns towards the car.
+  const face = Math.atan2(START.x - WELCOME_SIGN.x, START.z - WELCOME_SIGN.z);
+  assert.ok(deg(Math.abs(Math.atan2(Math.sin(face - WELCOME_SIGN.rotation), Math.cos(face - WELCOME_SIGN.rotation)))) < 35, 'sign faces the start');
+  const projects = PLACES.filter((p) => p.kind === 'project' && deg(off(...p.position)) < 30);
+  assert.ok(projects.length >= 1, 'a project building in view');
+  const sites = PLACES.filter((p) => p.kind === 'soon' && deg(off(...p.position)) < 40);
+  assert.equal(sites.length, 0, 'no building sites in the opening view');
 });

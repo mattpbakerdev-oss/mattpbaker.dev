@@ -11,6 +11,7 @@ import { createChaseCamera } from './camera.js';
 import { cameraOccluders } from './occlusion.js';
 import { createExtras } from './extras.js';
 import { createAudio } from './audio.js';
+import { WebGLFailure, isWebGLFailure } from './bootfail.js';
 
 const MAX_PIXEL_RATIO = 1.75;
 const MAX_DT = 0.05;   // clamp long frames (tab switches) so the car never tunnels
@@ -51,6 +52,14 @@ function showFallback() {
   $('fallback').querySelector('a')?.focus({ preventScroll: true });
 }
 
+/** Any other boot error: a short apology with a way to the normal site. */
+function showError() {
+  loader.classList.add('is-fallback');
+  status.parentElement.hidden = true;
+  $('boot-error').hidden = false;
+  $('boot-error').querySelector('a')?.focus({ preventScroll: true });
+}
+
 function webglAvailable() {
   // ?webgl=0 shows the fallback card on purpose, for checking it.
   if (new URLSearchParams(location.search).get('webgl') === '0') return false;
@@ -63,13 +72,12 @@ function webglAvailable() {
 }
 
 async function boot() {
-  if (!webglAvailable()) { showFallback(); return; }
+  if (!webglAvailable()) throw new WebGLFailure('WebGL is switched off or missing');
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  } catch {
-    showFallback();
-    return;
+  } catch (err) {
+    throw new WebGLFailure('Could not create a WebGL renderer', err);
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
@@ -103,7 +111,7 @@ async function boot() {
   car.onBump = (strength, nx, nz) => { chase.nudge(strength, nx, nz); emit('bump', { strength }); };
   car.onLand = (impact) => emit('land', { impact });
   const ui = createUI({ car, chase, world, input, events, canvas, reducedMotion });
-  markers.update(0, null, ui.visited);
+  markers.update(0, null, ui.visited, camera);
   const extras = createExtras({ scene, camera, world, car, events, ui, reducedMotion });
   const audio = createAudio({ events, car, ui });
 
@@ -131,9 +139,10 @@ async function boot() {
 
     const steps = Math.ceil(dt / STEP);
     for (let i = 0; i < steps; i++) car.update(dt / steps, input.state);
+    chase.setFocus(ui.active);
     chase.update(dt);
     ui.update(dt);
-    markers.update(dt, ui.active?.id ?? null, ui.visited);
+    markers.update(dt, ui.active?.id ?? null, ui.visited, camera);
     extras.update(dt, ui.isOpen);
     audio.update(input.state);
     world.update(dt, car.position, camera);
@@ -161,6 +170,7 @@ async function boot() {
 }
 
 boot().catch((err) => {
+  if (isWebGLFailure(err)) { showFallback(); return; }
   console.error(err);
-  showFallback();
+  showError();
 });

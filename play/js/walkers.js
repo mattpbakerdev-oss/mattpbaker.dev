@@ -1,19 +1,20 @@
 // Pure logic for the townsfolk: walking a short loop on the pavement, hopping clear when the
 // car hits them (never harmed, never knocked over), and turning to look at a horn. No three.js.
 
+import { wrapAngle } from './physics.js';
+
 const GRAVITY = 25;
 const HOP_UP = 5.5;
 const HOP_SIDE = 3.2;
 const RETURN_SPEED = 1.6;
 const TURN_RATE = 8;
-const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 // Paths sit on the pavement (about 6.5 off the road centreline) between lamp posts.
 // look: shirt, trousers, skin, hair.
 export const TOWNSFOLK = [
   { id: 'gym-goer', line: 'Have you seen the gym? The phone won’t let me in until I do push-ups.',
     path: [[21, -6.6], [29.5, -6.6]], look: ['#e8735a', '#3d4a6b', '#e9b48f', '#3a2a22'] },
-  { id: 'renter', line: 'I rented a flat in Bangkok. The listing scored 98.',
+  { id: 'renter', line: 'I’m moving to Bangkok. Apparently the listings get checked now.',
     path: [[-6.6, -53], [-6.6, -45]], look: ['#5bb5a2', '#2c2526', '#c98e6a', '#1f1a18'] },
   { id: 'film-fan', line: 'They filmed a video here. Captions and everything.',
     path: [[-63.6, 44], [-63.6, 49.5]], look: ['#8f7ad8', '#5a4a3a', '#f1c9a5', '#c99a30'] },
@@ -118,6 +119,6 @@ export function stepWalker(w, dt, car) {
   }
   const p = pointOnLoop(w.path, w.s);
   w.x = p.x + w.ox; w.z = p.z + w.oz;
-  w.heading = wrap(w.heading + wrap(target - w.heading) * (1 - Math.exp(-TURN_RATE * dt)));
+  w.heading = wrapAngle(w.heading + wrapAngle(target - w.heading) * (1 - Math.exp(-TURN_RATE * dt)));
   return w;
 }

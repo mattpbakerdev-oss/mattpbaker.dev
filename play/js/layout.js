@@ -1,7 +1,9 @@
 // Pure town layout data: roads, square, ramps, start. Shared by world.js, car.js and the tests.
-// The plot is a square of side 2 * PLOT_HALF centred on the origin. +x is east, +z is south.
+// The plot is a square of side 2 * PLOT_HALF centred on the origin, its corners rounded off with
+// radius PLOT_CORNER so the rim of trees can follow it. +x is east, +z is south.
 
 export const PLOT_HALF = 104;      // invisible boundary for the car
+export const PLOT_CORNER = 28;     // corner radius of that boundary
 export const ROAD_WIDTH = 10;
 export const RING = 70;            // ring road centreline sits at x, z = +-RING
 
@@ -32,5 +34,7 @@ export const RAMPS = [
 // Park: open grass in the south-east block, kept clear of trees near the ramp.
 export const PARK = { x: 35, z: 46, w: 50, d: 30 };
 
-export const START = { x: 0, z: 14, heading: 0 };
-export const WELCOME_SIGN = { x: -9, z: 26, rotation: Math.PI };
+// The car starts on the east side of the square facing north-east: the welcome sign stands at
+// the square's corner, turned to greet it, with the Up Lock gym and its phone beyond.
+export const START = { x: 8, z: 9, heading: 2.18 };
+export const WELCOME_SIGN = { x: 20, z: -11, rotation: -0.54 };

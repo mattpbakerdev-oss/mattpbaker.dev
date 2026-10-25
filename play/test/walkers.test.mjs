@@ -76,7 +76,7 @@ test('horn: stops and turns to look at the car, then walks on', () => {
 test('four townsfolk with the agreed lines', () => {
   assert.deepEqual(TOWNSFOLK.map((t) => t.line), [
     'Have you seen the gym? The phone won’t let me in until I do push-ups.',
-    'I rented a flat in Bangkok. The listing scored 98.',
+    'I’m moving to Bangkok. Apparently the listings get checked now.',
     'They filmed a video here. Captions and everything.',
     'Matt’s looking for a product role, you know. Just saying.',
   ]);

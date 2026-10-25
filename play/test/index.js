@@ -10,3 +10,8 @@ import './tumble.test.mjs';
 import './walkers.test.mjs';
 import './occlusion.test.mjs';
 import './audio.test.mjs';
+import './storage.test.mjs';
+import './bootfail.test.mjs';
+import './sheet.test.mjs';
+import './camrig.test.mjs';
+import './rim.test.mjs';

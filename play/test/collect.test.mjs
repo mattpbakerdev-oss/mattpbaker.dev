@@ -14,7 +14,7 @@ test('four collectibles with the agreed copy', () => {
   assert.equal(byId('dumbbell').title, 'Golden dumbbell');
   assert.equal(byId('dumbbell').text, 'Up Lock would accept this as one rep.');
   assert.equal(byId('reel').title, 'Film reel');
-  assert.equal(byId('reel').text, 'Cut from the transcript, never the script.');
+  assert.equal(byId('reel').text, 'Edited from what I said, not what I planned to say.');
   assert.equal(byId('cap').title, 'Graduation cap');
   assert.equal(byId('cap').text, 'First Class, UWE Bristol, 2026.');
   assert.equal(byId('tuktuk').title, 'Mini tuk-tuk');

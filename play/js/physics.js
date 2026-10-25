@@ -1,4 +1,5 @@
 // Pure 2D (x, z) geometry for the arcade car. No three.js, so node can test it.
+import { PLOT_HALF, PLOT_CORNER } from './layout.js';
 //
 // Rotation convention matches three.js rotation.y: a local point (lx, lz) sits in the world at
 // (lx cos r + lz sin r, -lx sin r + lz cos r). Heading 0 faces +z.
@@ -90,8 +91,37 @@ export function rampFootprint(ramp) {
   return { x: ramp.x, z: ramp.z, w: ramp.width * c + ramp.length * s, d: ramp.width * s + ramp.length * c };
 }
 
-/** Keep a circle inside the square plot (half size `half`). Normal points back inwards. */
-export function clampToPlot(x, z, r, half) {
+/** Angle wrapped into -PI..PI. */
+export const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+/**
+ * Signed distance from (x, z) to the edge of the plot: a square of half size `half` with
+ * corners rounded to `corner`. Negative inside, positive outside.
+ */
+export function plotDistance(x, z, half = PLOT_HALF, corner = PLOT_CORNER) {
+  const k = half - corner;
+  const qx = Math.abs(x) - k, qz = Math.abs(z) - k;
+  return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - corner;
+}
+
+/**
+ * Keep a circle inside the plot (half size `half`, corners rounded to `corner`; 0 for a sharp
+ * square). The normal points back inwards.
+ */
+export function clampToPlot(x, z, r, half, corner = 0) {
+  if (corner > 0) {
+    const d = plotDistance(x, z, half, corner);
+    if (d <= -r) return { x, z, hit: false, nx: 0, nz: 0 };
+    const k = half - corner;
+    const qx = Math.abs(x) - k, qz = Math.abs(z) - k;
+    let ox, oz; // outward normal
+    if (qx > 0 && qz > 0) {
+      const len = Math.hypot(qx, qz);
+      ox = Math.sign(x) * qx / len; oz = Math.sign(z) * qz / len;
+    } else if (qx > qz) { ox = Math.sign(x) || 1; oz = 0; } else { ox = 0; oz = Math.sign(z) || 1; }
+    const push = d + r;
+    return { x: x - ox * push, z: z - oz * push, hit: true, nx: -ox || 0, nz: -oz || 0 };
+  }
   const lim = half - r;
   let nx = 0, nz = 0, hit = false;
   if (x > lim) { x = lim; nx = -1; hit = true; } else if (x < -lim) { x = -lim; nx = 1; hit = true; }
@@ -114,7 +144,7 @@ export function nearestRoadPoint(x, z, roads, prefer = 0) {
     const dist = Math.hypot(x - px, z - pz);
     if (!best || dist < best.dist) {
       const options = alongX ? [Math.PI / 2, -Math.PI / 2] : [0, Math.PI];
-      const diff = (h) => Math.abs(Math.atan2(Math.sin(h - prefer), Math.cos(h - prefer)));
+      const diff = (h) => Math.abs(wrapAngle(h - prefer));
       const heading = diff(options[0]) <= diff(options[1]) ? options[0] : options[1];
       best = { x: px, z: pz, heading, dist };
     }

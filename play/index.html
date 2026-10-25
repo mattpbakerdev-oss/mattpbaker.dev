@@ -9,11 +9,13 @@
 <meta property="og:site_name" content="Matt Baker">
 <meta property="og:title" content="Mattsville · Matt Baker">
 <meta property="og:description" content="Drive round a small 3D town of Matt Baker's projects: Up Lock, Listing Check and a video pipeline.">
-<meta property="og:url" content="https://mattpbaker.dev/play/">
-<meta property="og:image" content="https://mattpbaker.dev/propertyscout/img/og.png">
+<meta property="og:url" content="https://mattpbaker.dev/play">
+<meta property="og:image" content="https://mattpbaker.dev/play/og.jpg">
+<meta property="og:image:alt" content="Mattsville: a sunny low-poly town with a cream cottage, a mustard post office and a coral gym with a giant phone on its roof.">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://mattpbaker.dev/play/og.jpg">
 <meta name="theme-color" content="#120F0F">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,6 +59,14 @@
       </a>
       <p class="fallback-or" id="fallback-or-label">Or go straight to</p>
       <ul class="fallback-links" id="fallback-links" aria-labelledby="fallback-or-label"></ul>
+    </div>
+    <div class="fallback" id="boot-error" hidden>
+      <h2 class="fallback-title">Something went wrong loading Mattsville</h2>
+      <p class="fallback-text">The town didn’t load this time. Everything in it is on the normal site.</p>
+      <a class="pill pill-amber" href="/">
+        Go to mattpbaker.dev
+        <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
     </div>
   </main>
   <a class="loader-exit" href="/">Prefer the normal site? <span>mattpbaker.dev</span></a>
@@ -109,7 +119,7 @@
   <div class="stick" data-stick aria-hidden="true"><span class="stick-knob" data-knob></span></div>
   <div class="touch-buttons">
     <button type="button" class="tbtn tbtn-horn" data-hold="horn" aria-label="Horn">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M3.8 10.5l5.8 1M14.4 11.5l5.8-1M12 14.5v6"/></svg>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.6"/><path d="M7.6 11h3.4l4.6-3.9v9.8L11 13H7.6"/><path d="M18.6 9.6a3.4 3.4 0 010 4.8M21 7.6a6.2 6.2 0 010 8.8"/></svg>
     </button>
     <button type="button" class="tbtn tbtn-go" id="touch-interact" data-hold="interact" aria-label="Look inside" aria-disabled="true">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9l8-5 8 5v11"/><path d="M10 20v-6h4v6"/></svg>
@@ -120,10 +130,13 @@
 <div class="scrim" id="scrim" hidden></div>
 
 <section class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" tabindex="-1" hidden>
-  <div class="panel-grab" data-grab aria-hidden="true"><span></span></div>
-  <button type="button" class="close" data-close aria-label="Close and keep driving">
-    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
-  </button>
+  <div class="panel-bar">
+    <div class="panel-grab" data-grab aria-hidden="true"><span></span></div>
+    <h2 class="panel-title" id="panel-title"></h2>
+    <button type="button" class="close" data-close aria-label="Close and keep driving">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
+  </div>
   <div class="panel-scroll" id="panel-body"></div>
 </section>
 
@@ -157,7 +170,7 @@
   <dl class="howto-keys" data-for="touch">
     <div><dt>Drive</dt><dd>Drag the stick, bottom left</dd></div>
     <div><dt>Look inside</dt><dd>The amber button lights up near a building</dd></div>
-    <div><dt>Horn</dt><dd>The button above it</dd></div>
+    <div><dt>Horn</dt><dd>The small button beside it</dd></div>
     <div><dt>Map and fast travel</dt><dd>Map, in the top bar</dd></div>
   </dl>
   <button type="button" class="pill pill-amber howto-go" data-close>

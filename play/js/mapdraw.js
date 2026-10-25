@@ -1,13 +1,15 @@
 // Top-down drawing of Mattsville on a 2D canvas, shared by the minimap and the map dialog.
 // World +x is east (right), +z is south (down), so the map is north-up with y = z.
-import { ROADS, PLAZA, FOUNTAIN, RAMPS, PARK, PLOT_HALF } from './layout.js';
+import { ROADS, PLAZA, FOUNTAIN, RAMPS, PARK, PLOT_HALF, PLOT_CORNER } from './layout.js';
 import { footprintRect, ringCentre } from './places.js';
 import { rampFootprint } from './physics.js';
 
 const INK = '#F5F1EE';
 const AMBER = '#E0A94A';
+// The town's own palette (world.js and models.js), drawn on a warm paper card.
+const PAPER = '#efe3cf', GRASS = '#7cb860', LAWN = '#8cc46c', ROAD = '#4a4547', STONE = '#dccbb4', WATER = '#7fcfd6', RAMP = '#f2c14e';
 export const MODEL_COLOUR = {
-  gym: '#e8735a', condo: '#5bb5a2', studio: '#8f7ad8', house: '#f3e7d3', 'post-office': '#f2c14e', site: '#8a7a6e',
+  gym: '#e8735a', condo: '#5bb5a2', studio: '#8f7ad8', house: '#f3e7d3', 'post-office': '#f2c14e', site: '#b88a5a',
 };
 
 const HALF = PLOT_HALF + 2;
@@ -25,42 +27,47 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
 }
 
-/** The parts that never change: ground, park, roads, square, ramps and buildings. */
+/** The parts that never change: card, ground, park, roads, square, ramps and buildings. */
 export function drawStatic(ctx, size, { pad, places, detail = true }) {
   const P = projector(size, pad);
   ctx.clearRect(0, 0, size, size);
-  // Town plot.
-  ctx.fillStyle = '#2a2321';
-  roundRect(ctx, P.x(-PLOT_HALF), P.y(-PLOT_HALF), PLOT_HALF * 2 * P.s, PLOT_HALF * 2 * P.s, 14 * P.s);
+  ctx.fillStyle = PAPER;
+  roundRect(ctx, 0, 0, size, size, detail ? 14 : 12);
   ctx.fill();
-  ctx.fillStyle = '#2f2a24';
+  // Town plot, with the same rounded corners as the boundary.
+  ctx.fillStyle = GRASS;
+  roundRect(ctx, P.x(-PLOT_HALF), P.y(-PLOT_HALF), PLOT_HALF * 2 * P.s, PLOT_HALF * 2 * P.s, PLOT_CORNER * P.s);
+  ctx.fill();
+  ctx.fillStyle = LAWN;
   roundRect(ctx, P.x(PARK.x - PARK.w / 2), P.y(PARK.z - PARK.d / 2), PARK.w * P.s, PARK.d * P.s, 6 * P.s);
   ctx.fill();
-  // Roads.
-  ctx.fillStyle = '#4a403e';
+  // Roads, then the paved square and the fountain on top.
+  ctx.fillStyle = ROAD;
   for (const r of ROADS) ctx.fillRect(P.x(r.x - r.w / 2), P.y(r.z - r.d / 2), r.w * P.s, r.d * P.s);
+  ctx.fillStyle = STONE;
   ctx.beginPath();
   ctx.arc(P.x(PLAZA.x), P.y(PLAZA.z), PLAZA.r * P.s, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#5b504c';
+  ctx.fillStyle = WATER;
   ctx.beginPath();
   ctx.arc(P.x(FOUNTAIN.x), P.y(FOUNTAIN.z), FOUNTAIN.r * P.s, 0, Math.PI * 2);
   ctx.fill();
   if (detail) {
-    ctx.fillStyle = '#6a5d58';
+    ctx.fillStyle = RAMP;
     for (const ramp of RAMPS) {
       const f = rampFootprint(ramp);
       ctx.fillRect(P.x(f.x - f.w / 2), P.y(f.z - f.d / 2), f.w * P.s, f.d * P.s);
     }
   }
-  // Buildings in their own colours.
+  // Buildings in their own colours, with a soft outline so the cream house reads on grass.
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(44,37,38,0.35)';
   for (const place of places) {
     const r = footprintRect(place);
-    ctx.fillStyle = MODEL_COLOUR[place.model] ?? '#8a7a6e';
-    ctx.globalAlpha = place.kind === 'soon' ? 0.7 : 0.92;
+    ctx.fillStyle = MODEL_COLOUR[place.model] ?? '#b88a5a';
     roundRect(ctx, P.x(r.x - r.w / 2), P.y(r.z - r.d / 2), r.w * P.s, r.d * P.s, 2.2 * P.s);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.stroke();
   }
 }
 
@@ -72,7 +79,7 @@ export function drawDynamic(ctx, size, { pad, places, visited, car, dot = 4 }) {
     const seen = visited.has(place.id);
     ctx.beginPath();
     ctx.arc(P.x(cx), P.y(cz), dot, 0, Math.PI * 2);
-    ctx.fillStyle = seen ? '#6f6664' : AMBER;
+    ctx.fillStyle = seen ? '#8a7f7a' : AMBER;
     ctx.fill();
     ctx.lineWidth = Math.max(1.5, dot * 0.4);
     ctx.strokeStyle = '#1C1717';

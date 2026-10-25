@@ -10,7 +10,7 @@ const REACH = 1.9;        // car radius plus the collectible's own size
 // (which climbs north to 2 units at z = -30), so only a car in the air can reach it.
 export const COLLECTIBLES = [
   { id: 'dumbbell', title: 'Golden dumbbell', text: 'Up Lock would accept this as one rep.', x: 40, y: 1, z: -28.5 },
-  { id: 'reel', title: 'Film reel', text: 'Cut from the transcript, never the script.', x: 0, y: 3.2, z: -35 },
+  { id: 'reel', title: 'Film reel', text: 'Edited from what I said, not what I planned to say.', x: 0, y: 3.2, z: -35 },
   { id: 'cap', title: 'Graduation cap', text: 'First Class, UWE Bristol, 2026.', x: 22, y: 1, z: 52 },
   { id: 'tuktuk', title: 'Mini tuk-tuk', text: 'Bangkok, next.', x: -20, y: 1, z: 99.5 },
 ];

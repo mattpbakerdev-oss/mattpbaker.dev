@@ -8,15 +8,12 @@ import { PLACES } from './places.js';
 import { placeInRange, travelSpot } from './proximity.js';
 import { drawStatic, drawDynamic, drawLabels, placeAtMapPoint, MODEL_COLOUR } from './mapdraw.js';
 import { createTouchControls } from './touch.js';
+import { storeGet, storeSet } from './storage.js';
+import { shouldDismiss } from './sheet.js';
 
 const $ = (id) => document.getElementById(id);
 const FOCUSABLE = 'a[href], button:not([disabled]), video[controls], iframe, [tabindex]:not([tabindex="-1"])';
 const STORE = { visited: 'mattsville.visited', howto: 'mattsville.howto' };
-
-const store = {
-  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
-  set(key, value) { try { localStorage.setItem(key, value); } catch { /* private mode: fine */ } },
-};
 
 /** Tiny element builder: h('p', { class: 'x' }, 'text', child). */
 function h(tag, attrs = {}, ...children) {
@@ -37,6 +34,7 @@ const ICON = {
   out: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l6-6M6 5h5v5"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>',
   tick: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>',
+  copy: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.2A1.6 1.6 0 008.9 2H3.6A1.6 1.6 0 002 3.6v5.3a1.6 1.6 0 001.2 1.6"/></svg>',
 };
 const isExternal = (href) => /^https?:\/\//.test(href);
 const KIND_LABEL = { project: 'Project', about: 'About me', contact: 'Get in touch', soon: 'Coming soon' };
@@ -51,10 +49,12 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
   const mapDlg = $('map'), mapCanvas = $('map-canvas'), mapList = $('map-list');
   const howto = $('howto'), announcer = $('announcer'), toasts = $('toasts');
   const touchInteract = $('touch-interact'), soundBtn = $('hud-sound');
-  const outside = [canvas, hud, minimap, prompt, touchEl, toasts];
+  const panelTitle = $('panel-title');
+  // Made inert while a dialog is open. Toasts stay live so "Copied" is still announced.
+  const outside = [canvas, hud, minimap, prompt, touchEl];
 
   let visited;
-  try { visited = new Set(JSON.parse(store.get(STORE.visited) || '[]')); } catch { visited = new Set(); }
+  try { visited = new Set(JSON.parse(storeGet(STORE.visited) || '[]')); } catch { visited = new Set(); }
   let active = null;      // place whose ring the car is in
   let arrival = null;     // place we fast-travelled to (prompt stays until the car drives off)
   let arrivalSpot = null;
@@ -63,6 +63,9 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
   let open = null;        // the open dialog element
   let openPlace = null;
   let lastFocus = null;
+  let openedAt = 0;
+  let promptTimer = null;
+  let promptFor = null;   // the place the prompt is showing (null while it is hidden or leaving)
 
   createTouchControls(touchEl, input);
 
@@ -81,6 +84,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     closeSoundMenu();
     if (!replacing) lastFocus = document.activeElement;
     open = el;
+    openedAt = performance.now();
     el._onClose = onClose;
     el.hidden = false;
     scrim.hidden = false;
@@ -129,7 +133,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     else if (!e.shiftKey && (!inside || document.activeElement === last)) { e.preventDefault(); first.focus(); }
   });
   for (const el of [panel, mapDlg, howto]) el.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeDialog()));
-  scrim.addEventListener('click', () => closeDialog());
+  // A click arriving just after a dialog opened is the tail of the tap that opened it.
+  scrim.addEventListener('click', () => { if (performance.now() - openedAt > 350) closeDialog(); });
 
   // ---------- Place panels ----------
   function linkEl(link, primary) {
@@ -160,7 +165,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     const yts = media.filter((m) => m.type === 'youtube');
     if (yts.length) {
       parts.push(h('div', { class: 'yt-row' }, yts.map((m) => {
-        const box = h('div', { class: 'yt' });
+        const box = h('div', { class: 'yt', tabindex: '-1', 'aria-label': m.alt });
         const btn = h('button', { type: 'button', class: 'yt-thumb', 'aria-label': `Play ${m.alt}` },
           h('img', { src: `https://i.ytimg.com/vi/${m.id}/hqdefault.jpg`, alt: '', loading: 'lazy' }),
           h('span', { class: 'yt-play', 'aria-hidden': 'true', html: ICON.play }));
@@ -169,9 +174,17 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
             src: `https://www.youtube-nocookie.com/embed/${m.id}?autoplay=1&playsinline=1&rel=0`,
             title: m.alt, allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
           });
+          // Keys pressed inside the player never reach this page, so Esc wouldn't close the panel.
+          // Once it has loaded (and started), keep focus on the box; a click into the player
+          // still works, and the close button stays in view in the panel's header.
+          frame.addEventListener('load', () => {
+            if (document.activeElement === frame || document.activeElement === document.body) box.focus({ preventScroll: true });
+          }, { once: true });
           box.replaceChildren(frame);
-          frame.focus();
+          box.focus({ preventScroll: true });
         });
+        // Closing the panel puts the thumbnail back, which also stops the video.
+        box._reset = () => { if (!box.contains(btn)) box.replaceChildren(btn); };
         box.append(btn);
         return box;
       })), h('p', { class: 'media-note' }, 'Videos load from YouTube when you press play.'));
@@ -179,18 +192,62 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     return h('div', { class: 'media' }, parts);
   }
 
+  /** The email address as text you can read and copy, with a Copy button. */
+  function emailEl(address) {
+    const label = h('span', {}, 'Copy');
+    const btn = h('button', { type: 'button', class: 'email-copy', 'aria-label': `Copy ${address}` },
+      h('span', { class: 'email-icon', 'aria-hidden': 'true', html: ICON.copy }), label);
+    const text = h('span', { class: 'email-text' }, address);
+    let reset = null;
+    btn.addEventListener('click', async () => {
+      const ok = await copyText(address);
+      if (ok) {
+        toast('Email address copied.', { title: 'Copied', duration: 2400 });
+        label.textContent = 'Copied';
+        btn.classList.add('is-done');
+        clearTimeout(reset);
+        reset = setTimeout(() => { label.textContent = 'Copy'; btn.classList.remove('is-done'); }, 1800);
+      } else {
+        // No clipboard here: select the address so a long-press or Ctrl+C copies it.
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const sel = getSelection();
+        sel?.removeAllRanges(); sel?.addRange(range);
+        toast('The address is selected, so you can copy it yourself.', { title: 'Couldn’t copy' });
+      }
+    });
+    return h('div', { class: 'email' }, h('p', { class: 'email-label' }, 'Email'), h('div', { class: 'email-row' }, text, btn));
+  }
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true; }
+    } catch { /* blocked: try the old way */ }
+    try {
+      const area = h('textarea', { class: 'sr-only', readonly: true, 'aria-hidden': 'true' });
+      area.value = text;
+      panel.append(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      area.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
   function renderPlace(place) {
     const soon = place.kind === 'soon';
-    const body = soon ? ['Something new is being built here.'] : place.body ?? [];
-    const links = (place.links ?? []).map((l, i) => linkEl(l, i === 0));
+    const body = soon ? ['Something new is being built here. The finished ones are on the map.'] : place.body ?? [];
+    const firstPrimary = !(place.links ?? []).some((l) => l.primary);
+    const links = (place.links ?? []).map((l, i) => linkEl(l, l.primary || (firstPrimary && i === 0)));
     if (place.cv) links.push(linkEl({ label: 'Download my CV', href: place.cv }, false));
     for (const s of place.social ?? []) links.push(linkEl(s, false));
     return [
-      h('header', { class: 'panel-head' },
-        h('h2', { id: 'panel-title' }, place.title),
-        place.tagline ? h('p', { class: 'panel-tagline' }, place.tagline) : null),
+      place.tagline ? h('p', { class: 'panel-tagline' }, place.tagline) : null,
       mediaEl(place),
       h('div', { class: 'panel-copy' }, body.map((t) => h('p', {}, t))),
+      place.email ? emailEl(place.email) : null,
       place.stats?.length ? h('dl', { class: 'stats' }, place.stats.map((s) => h('div', {}, h('dt', {}, s.value), h('dd', {}, s.label)))) : null,
       links.length ? h('div', { class: 'links' }, links) : null,
       soon ? h('div', { class: 'links' }, h('button', { type: 'button', class: 'pill pill-line', onclick: () => openMap() },
@@ -201,42 +258,74 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     ];
   }
 
+  /** Stop anything playing in the panel: pause videos, put YouTube thumbnails back. */
+  function stopMedia() {
+    for (const v of panel.querySelectorAll('video')) v.pause();
+    for (const box of panel.querySelectorAll('.yt')) box._reset?.();
+  }
+
   function openPanel(place) {
+    stopMedia();
+    panelTitle.textContent = place.title;
     panelBody.replaceChildren(...renderPlace(place).filter(Boolean));
     panelBody.scrollTop = 0;
+    panel.classList.remove('is-scrolled');
     panel.dataset.kind = place.kind;
     openPlace = place;
-    openDialog(panel, { scrimClass: 'scrim-panel', onClose: () => { emit('panel-close', { place }); openPlace = null; } });
+    openDialog(panel, { scrimClass: 'scrim-panel', onClose: () => { stopMedia(); emit('panel-close', { place }); openPlace = null; } });
     panelBody.scrollTop = 0;
     const first = !visited.has(place.id);
-    if (first) { visited.add(place.id); store.set(STORE.visited, JSON.stringify([...visited])); drawMinimapStatic(); }
+    if (first) { visited.add(place.id); storeSet(STORE.visited, JSON.stringify([...visited])); drawMinimapStatic(); }
     emit('panel-open', { place });
     emit('visit', { place, first });
   }
 
-  // Swipe the sheet down to close it on phones. A quick flick is enough.
+  // Swipe the sheet down to close it on phones: from the grab handle, or from the content when
+  // it is scrolled to the top. A quick flick is enough (sheet.js has the rule).
+  panelBody.addEventListener('scroll', () => panel.classList.toggle('is-scrolled', panelBody.scrollTop > 2), { passive: true });
+  const phone = matchMedia('(max-width: 719px)');
   const grab = panel.querySelector('[data-grab]');
   let drag = null;
+  const dragTo = (dy) => { panel.style.transform = `translateY(${dy > 0 ? dy : dy * 0.15}px)`; };
+  const finishDrag = (dy) => {
+    const ms = performance.now() - drag.t;
+    panel.classList.remove('is-dragging');
+    drag = null;
+    if (shouldDismiss(dy, ms)) closeDialog();
+    else panel.style.transform = '';
+  };
   grab.addEventListener('pointerdown', (e) => {
     drag = { y: e.clientY, t: performance.now(), id: e.pointerId };
     grab.setPointerCapture(e.pointerId);
     panel.classList.add('is-dragging');
   });
-  grab.addEventListener('pointermove', (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const dy = e.clientY - drag.y;
-    panel.style.transform = `translateY(${dy > 0 ? dy : dy * 0.15}px)`;
-  });
-  const endDrag = (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const dy = e.clientY - drag.y, v = dy / Math.max(1, performance.now() - drag.t);
-    panel.classList.remove('is-dragging');
-    drag = null;
-    if (dy > 110 || (dy > 20 && v > 0.5)) closeDialog();
-    else panel.style.transform = '';
-  };
-  grab.addEventListener('pointerup', endDrag);
-  grab.addEventListener('pointercancel', endDrag);
+  grab.addEventListener('pointermove', (e) => { if (drag && e.pointerId === drag.id) dragTo(e.clientY - drag.y); });
+  const endGrab = (e) => { if (drag && e.pointerId === drag.id) finishDrag(e.clientY - drag.y); };
+  grab.addEventListener('pointerup', endGrab);
+  grab.addEventListener('pointercancel', endGrab);
+  // From the content: touch events, so a pull down at the top can take over from scrolling.
+  let pull = null;
+  panelBody.addEventListener('touchstart', (e) => {
+    pull = phone.matches && e.touches.length === 1 && panelBody.scrollTop <= 0 ? { y: e.touches[0].clientY, on: false } : null;
+  }, { passive: true });
+  panelBody.addEventListener('touchmove', (e) => {
+    if (!pull) return;
+    const dy = e.touches[0].clientY - pull.y;
+    if (!pull.on) {
+      if (dy < 0 || panelBody.scrollTop > 0) { pull = null; return; } // scrolling up: leave it be
+      if (dy < 8) return;
+      pull.on = true;
+      pull.y += 8;
+      drag = { t: performance.now() };
+      panel.classList.add('is-dragging');
+    }
+    e.preventDefault();
+    pull.dy = Math.max(0, e.touches[0].clientY - pull.y);
+    dragTo(pull.dy);
+  }, { passive: false });
+  const endPull = () => { if (pull?.on && drag) finishDrag(pull.dy ?? 0); pull = null; };
+  panelBody.addEventListener('touchend', endPull);
+  panelBody.addEventListener('touchcancel', endPull);
 
   // ---------- Map and fast travel ----------
   const MAP_PAD = 10;
@@ -254,10 +343,13 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     drawDynamic(ctx, size, { pad: MAP_PAD, places: PLACES, visited, car, dot: size > 400 ? 5 : 4 });
     drawLabels(ctx, size, { pad: MAP_PAD, places: PLACES, font: size > 400 ? 13 : 11.5 });
   }
+  // The building sites share one row; it takes you to the middle one.
+  const sites = PLACES.filter((p) => p.kind === 'soon');
+  const MAP_ROWS = PLACES.filter((p) => p.kind !== 'soon' || p === sites[Math.floor(sites.length / 2)]);
   function buildMapList() {
-    mapList.replaceChildren(...PLACES.map((place) => {
-      const seen = visited.has(place.id);
-      const name = place.kind === 'soon' ? `${place.title} ${place.id.split('-').pop()}` : place.title;
+    mapList.replaceChildren(...MAP_ROWS.map((place) => {
+      const seen = place.kind === 'soon' ? sites.every((p) => visited.has(p.id)) : visited.has(place.id);
+      const name = place.kind === 'soon' ? 'Building sites' : place.title;
       return h('li', {}, h('button', { type: 'button', class: 'map-item', onclick: () => travel(place) },
         h('span', { class: `map-dot${seen ? ' is-seen' : ''}`, style: `--c:${MODEL_COLOUR[place.model] ?? '#8a7a6e'}`, 'aria-hidden': 'true', html: seen ? ICON.tick : '' }),
         h('span', { class: 'map-name' }, name),
@@ -315,11 +407,22 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     requestAnimationFrame(() => { announcer.textContent = text; });
   }
   function setPrompt(place) {
-    if (!place) { prompt.classList.remove('is-shown'); prompt.hidden = true; return; }
+    clearTimeout(promptTimer);
+    if (!place) {
+      if (!promptFor) return;
+      promptFor = null;
+      prompt.classList.remove('is-shown');
+      // Let the exit transition play, then take it out of the tab order.
+      if (reducedMotion) prompt.hidden = true;
+      else promptTimer = setTimeout(() => { prompt.hidden = true; }, 160);
+      return;
+    }
     $('prompt-place').textContent = place.title;
     $('prompt-act').innerHTML = isTouch() ? 'Tap to look inside' : 'Press <kbd>E</kbd> to look inside';
+    const wasHidden = prompt.hidden;
+    promptFor = place;
     prompt.hidden = false;
-    void prompt.offsetWidth;
+    if (wasHidden) void prompt.offsetWidth;
     prompt.classList.add('is-shown');
   }
   prompt.addEventListener('click', () => { const p = active ?? arrival; if (p) openPanel(p); });
@@ -399,8 +502,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
 
   // ---------- How to play ----------
   function maybeHowTo() {
-    if (store.get(STORE.howto)) return;
-    openDialog(howto, { scrimClass: 'scrim-dim', focus: howto.querySelector('.howto-go'), onClose: () => store.set(STORE.howto, 'seen') });
+    if (storeGet(STORE.howto)) return;
+    openDialog(howto, { scrimClass: 'scrim-dim', focus: howto.querySelector('.howto-go'), onClose: () => storeSet(STORE.howto, 'seen') });
   }
 
   // iOS pinch-zoom on the game; panels still scroll.
@@ -432,8 +535,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
         touchInteract.classList.toggle('is-lit', Boolean(now));
         if (entered) announce(`${now.title}. ${isTouch() ? 'Tap the amber button' : 'Press E'} to look inside.`);
       }
-      if (open && !prompt.hidden) setPrompt(null);
-      if (!open && now && prompt.hidden) setPrompt(now);
+      if (open && promptFor) setPrompt(null);
+      if (!open && now && !promptFor) setPrompt(now);
       drawMinimap();
     },
     openPanel, openMap, closeDialog, travel, toast, setFound, setSound, closeSoundMenu,

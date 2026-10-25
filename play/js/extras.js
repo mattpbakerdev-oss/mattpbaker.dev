@@ -6,19 +6,19 @@
 // Listens for: horn.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { mergeColoured, box, COLOURS } from './world.js';
+import { mergeColoured, box, material } from './world.js';
 import { COLLECTIBLES, findPickups, loadFound, saveFound } from './collect.js';
 import { PROP_KINDS, createBody, resetBody, knock, stepBody, shouldReset } from './tumble.js';
 import { TOWNSFOLK, createWalker, stepWalker, hitWalker, hornWalker } from './walkers.js';
 import { clearSpot } from './placement.js';
-import { circleVsBox } from './physics.js';
+import { circleVsBox, clampToPlot } from './physics.js';
+import { safeStorage } from './storage.js';
 
 const CAR_R = 1.35;
 const SIGN_NEAR = 11;
 const SAY_NEAR = 8.5;
 const HORN_REACH = 24;
 const $ = (id) => document.getElementById(id);
-const store = (() => { try { return window.localStorage; } catch { return null; } })();
 
 // rot turns the board's face (local +z) towards the road. The Bangkok board is an arrow whose
 // tip (local +x) points east-south-east: rotation -22.5 degrees.
@@ -26,7 +26,7 @@ const SIGNS = [
   { text: 'Speed limit: whatever ships it', x: 7.6, z: 34, rot: -Math.PI / 2, along: [0, 1] },
   { text: 'Caution: specs ahead', x: -39, z: 62.4, rot: 0, along: [1, 0] },
   { text: 'This road was built by an AI. I reviewed the plan', x: -38, z: 7.6, rot: Math.PI, along: [1, 0] },
-  { text: 'Bangkok: 9,500 km that way', x: 58, z: -7.6, rot: -Math.PI / 8, along: [1, 0], arrow: true },
+  { text: 'Bangkok: 9,500\u00a0km that way', x: 58, z: -7.6, rot: -Math.PI / 8, along: [1, 0], arrow: true },
   { text: 'Every build keeps a log. This sign is in it', x: -7.6, z: -60, rot: Math.PI / 2, along: [0, 1] },
   { text: 'Park responsibly. Or don’t, it’s a game', x: 62.4, z: 51, rot: Math.PI / 2, along: [0, 1] },
 ];
@@ -41,7 +41,6 @@ const PROPS = [
     .map(([x, z, rot]) => ({ kind: 'fence', x, z, rot })),
 ];
 
-const material = (opts = {}) => new THREE.MeshLambertMaterial({ flatShading: true, ...opts });
 const M4 = new THREE.Matrix4(), M4b = new THREE.Matrix4(), Q = new THREE.Quaternion(), Q2 = new THREE.Quaternion();
 const V = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1), ONE = new THREE.Vector3(1, 1, 1);
 const UP = new THREE.Vector3(0, 1, 0), XAXIS = new THREE.Vector3(1, 0, 0);
@@ -108,6 +107,7 @@ export function createExtras({ scene, camera, world, car, events, ui, reducedMot
   };
 
   // Collectibles: counter, persistence, celebration.
+  const store = safeStorage();
   const found = loadFound(store);
   for (const c of loot.items) if (found.has(c.id)) c.mesh.visible = false;
   loot.refreshHalos(found);
@@ -194,9 +194,8 @@ export function createExtras({ scene, camera, world, car, events, ui, reducedMot
         }
         if (b.knocked && !b.asleep) {
           stepBody(b, dt, world.groundHeightAt);
-          const lim = world.plotHalf - 0.5;
-          if (Math.abs(b.x) > lim) { b.x = Math.sign(b.x) * lim; b.vx *= -0.3; }
-          if (Math.abs(b.z) > lim) { b.z = Math.sign(b.z) * lim; b.vz *= -0.3; }
+          const edge = clampToPlot(b.x, b.z, 0.5, world.plotHalf, world.plotCorner);
+          if (edge.hit) { b.x = edge.x; b.z = edge.z; b.vx *= -0.3; b.vz *= -0.3; }
           props.dirty.add(b.kind);
         }
         if (shouldReset(b, clock, inView(b.x, b.y, b.z) || inView(b.home.x, 0.5, b.home.z))) {
@@ -253,7 +252,7 @@ function signAtlas(signs) {
     let size = 50, lines;
     for (; size >= 26; size -= 2) {
       ctx.font = `600 ${size}px Onest, "Segoe UI", Helvetica, Arial, sans-serif`;
-      lines = wrap(ctx, s.text, maxW);
+      lines = wrapText(ctx, s.text, maxW);
       if (lines.length * size * 1.15 <= CH - 34 && lines.length <= 3) break;
     }
     const lh = size * 1.15, cx = x0 + (s.arrow ? CW / 2 - 18 : CW / 2);
@@ -265,7 +264,7 @@ function signAtlas(signs) {
   return tex;
 }
 
-function wrap(ctx, text, maxW) {
+function wrapText(ctx, text, maxW) {
   const words = text.split(' ');
   const lines = [];
   let cur = '';

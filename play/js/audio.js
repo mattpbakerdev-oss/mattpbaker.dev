@@ -1,10 +1,12 @@
 // Web Audio synthesis for Mattsville: no sound files. Engine hum, horn, bumps, landings, prop
 // thunks, chimes, soft UI clicks and an optional cheerful loop. Nothing starts until the
-// "Start driving" click (a user gesture), and settings live in localStorage.
+// "Start driving" click (a user gesture), and settings live in localStorage (through storage.js, so blocked site data is fine).
 //
 // Listens on `events`: start, sound { effects, music }, horn, bump { strength }, land { impact },
 // prop-hit { kind, strength }, walker-hit, collect, collect-all, panel-open/close,
 // map-open/close, menu-open.
+
+import { safeStorage } from './storage.js';
 
 export const SOUND_KEY = 'mattsville.sound';
 const DEFAULTS = { effects: true, music: false };
@@ -47,7 +49,7 @@ const TUNE = [
   [65, null, null, null, null, null, null, null],
 ];
 
-export function createAudio({ events, car, ui, storage = globalThis.localStorage }) {
+export function createAudio({ events, car, ui, storage = safeStorage() }) {
   let settings = loadSoundSettings(storage);
   let ctx = null, out, fx, music, engine, noise;
   let started = false;

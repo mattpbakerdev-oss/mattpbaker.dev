@@ -423,11 +423,68 @@ function cone(x, z) {
   ];
 }
 
-// Building sites: a dirt plot inside striped barriers, a crane, cones and a "Coming soon" board.
+/** A small tower crane on site, top of the mast at about 10 units. */
+function crane(mx, mz, cabin) {
+  const p = [];
+  const top = 10;
+  for (let i = 0; i < 6; i++) p.push(B(1.0, 1.5, 1.0, mx, 0.85 + i * 1.6, mz, C.mustard), B(1.06, 0.12, 1.06, mx, 1.6 + i * 1.6, mz, C.ink));
+  p.push(B(2.2, 0.4, 2.2, mx, 0.2, mz, C.concrete));
+  const jib = [
+    B(1.4, 1.3, 1.6, 0.4, 0.3, 1.1, cabin),
+    B(1.0, 0.6, 0.06, 0.4, 0.45, 1.92, C.glass),
+    B(11, 0.5, 0.6, 5.0, 1.0, 0, C.mustard),
+    B(4.4, 0.5, 0.6, -2.2, 1.0, 0, C.mustard),
+    B(1.6, 1.4, 1.0, -3.8, 0.4, 0, '#9a9396'),
+    B(0.3, 2.6, 0.3, 0, 2.3, 0, C.mustard),
+    B(9.0, 0.08, 0.08, 4.3, 2.3, 0, C.ink, { rz: -0.27 }),
+    B(4.6, 0.08, 0.08, -1.9, 2.3, 0, C.ink, { rz: 0.52 }),
+    B(0.06, 4.2, 0.06, 8, -1.4, 0, C.ink),
+    B(0.5, 0.5, 0.5, 8, -3.6, 0, C.coral),
+    B(3, 0.35, 0.35, 8, -4.1, 0, C.red, { ry: 0.5 }),
+  ];
+  p.push(...place(jib, { x: mx, y: top, z: mz, ry: 2.6 }));
+  return p;
+}
+
+/** A small yellow digger, arm down towards the spoil heap (local +x). */
+function digger(cabin) {
+  const p = [
+    B(0.7, 0.7, 3.0, 0, 0.4, -1.0, C.ink), B(0.7, 0.7, 3.0, 0, 0.4, 1.0, C.ink),   // tracks
+    ...[-1.1, 0, 1.1].flatMap((x) => [Cy(0.28, 0.28, 0.72, 8, x, 0.4, -1.0, '#5a5052', { rx: Math.PI / 2 }), Cy(0.28, 0.28, 0.72, 8, x, 0.4, 1.0, '#5a5052', { rx: Math.PI / 2 })]),
+    B(2.6, 0.9, 2.4, -0.2, 1.25, 0, C.mustard),                                     // body
+    B(1.0, 0.8, 2.2, -1.25, 1.35, 0, C.mustardDark),                                // counterweight
+    B(1.3, 1.3, 1.1, 0.3, 2.35, -0.55, cabin),                                      // cab
+    B(1.0, 0.8, 0.06, 0.3, 2.45, 0.02, C.glass), B(0.06, 0.8, 0.8, 0.96, 2.45, -0.55, C.glass),
+    B(1.4, 0.1, 1.2, 0.3, 3.05, -0.55, C.cream),
+  ];
+  // Boom up and out, stick down, bucket.
+  p.push(...place([B(3.2, 0.42, 0.42, 1.6, 0, 0, C.mustard)], { x: 0.9, y: 1.7, z: 0.45, rz: 0.55 }));
+  p.push(...place([B(2.4, 0.36, 0.36, 1.2, 0, 0, C.mustard)], { x: 3.6, y: 3.4, z: 0.45, rz: -1.15 }));
+  p.push(...place([B(0.9, 0.7, 0.9, 0, 0, 0, C.ink), B(0.1, 0.18, 0.9, 0.45, -0.4, 0, C.steel)], { x: 4.55, y: 1.1, z: 0.45, rz: 0.4 }));
+  return p;
+}
+
+/** Stacked pallets, a pile of bricks and a huddle of cones, waiting for the builders. */
+function pallets(mx, mz) {
+  const p = [];
+  const pallet = (x, y, z, ry = 0) => place([
+    B(1.3, 0.08, 1.1, 0, 0.2, 0, '#c99258'),
+    ...[-0.5, 0, 0.5].map((dx) => B(0.14, 0.14, 1.1, dx, 0.08, 0, C.brown)),
+  ], { x, y, z, ry });
+  for (let i = 0; i < 4; i++) p.push(...pallet(mx, i * 0.26, mz, i * 0.12));
+  for (let i = 0; i < 2; i++) p.push(...pallet(mx + 1.6, i * 0.26, mz + 0.4, 0.4 + i * 0.1));
+  // Bricks on the top pallet.
+  for (let i = 0; i < 6; i++) p.push(B(0.5, 0.22, 0.24, mx - 0.3 + (i % 2) * 0.55, 1.15 + Math.floor(i / 2) * 0.23, mz - 0.1 + (i % 3) * 0.05, '#b4553f'));
+  for (const [x, z] of [[-1.4, 1.2], [-0.6, 1.6], [0.3, 1.5], [-1.0, 2.2], [1.1, 1.9]]) p.push(...cone(mx + x, mz + z));
+  return p;
+}
+
+// Building sites: a dirt plot inside striped barriers, one crane or a digger or pallets, cones
+// and a "Coming soon" board.
 const SITE_LOOK = [
-  { jib: 0.5, cabin: C.teal },
-  { jib: 2.6, cabin: C.lilac },
-  { jib: -0.25, cabin: C.coral },
+  { cabin: C.teal },
+  { cabin: C.lilac },
+  { cabin: C.coral },
 ];
 function site(place_) {
   const idx = Math.max(0, Number(String(place_.id).split('-').pop()) - 1) % SITE_LOOK.length;
@@ -469,24 +526,12 @@ function site(place_) {
     B(0.22, 3.8, 0.22, 2.6, 1.9, 6.1, C.trunk), B(0.22, 3.8, 0.22, 6.6, 1.9, 6.1, C.trunk),
     B(4.7, 2.8, 0.16, 4.6, 2.55, 6.15, C.mustard),
   );
-  // Tower crane.
-  const mx = -5.4, mz = -3.6, top = 16;
-  for (let i = 0; i < 10; i++) p.push(B(1.0, 1.5, 1.0, mx, 0.85 + i * 1.6, mz, C.mustard), B(1.06, 0.12, 1.06, mx, 1.6 + i * 1.6, mz, C.ink));
-  p.push(B(2.2, 0.4, 2.2, mx, 0.2, mz, C.concrete));
-  const jib = [
-    B(1.4, 1.3, 1.6, 0.4, 0.3, 1.1, look.cabin),
-    B(1.0, 0.6, 0.06, 0.4, 0.45, 1.92, C.glass),
-    B(13, 0.5, 0.6, 6.0, 1.0, 0, C.mustard),
-    B(5, 0.5, 0.6, -2.5, 1.0, 0, C.mustard),
-    B(1.6, 1.4, 1.0, -4.3, 0.4, 0, '#9a9396'),
-    B(0.3, 3, 0.3, 0, 2.5, 0, C.mustard),
-    B(10.4, 0.08, 0.08, 5, 2.62, 0, C.ink, { rz: -0.268 }),
-    B(5.3, 0.08, 0.08, -2.25, 2.62, 0, C.ink, { rz: 0.548 }),
-    B(0.06, 6.2, 0.06, 9, -2.4, 0, C.ink),
-    B(0.5, 0.5, 0.5, 9, -5.6, 0, C.coral),
-    B(3, 0.35, 0.35, 9, -6.1, 0, C.red, { ry: 0.5 }),
-  ];
-  p.push(...place(jib, { x: mx, y: top, z: mz, ry: look.jib }));
+  // One plot gets a small tower crane (kept low so it doesn't rule the skyline); the others a
+  // digger or a pile of pallets and cones.
+  const mx = -5.4, mz = -3.6;
+  if (idx === 1) p.push(...crane(mx, mz, look.cabin));
+  else if (idx === 0) p.push(...place(digger(look.cabin), { x: mx + 0.6, z: mz + 0.4, ry: 0.7 }));
+  else p.push(...pallets(mx, mz));
   // Site cabin.
   p.push(
     B(4.2, 2.4, 2.2, 5.2, 1.3, -4.8, look.cabin),

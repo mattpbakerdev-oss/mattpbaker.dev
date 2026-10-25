@@ -1,34 +1,26 @@
-// The town: sky, terrain, roads, square, ramps, props and placeholder buildings, built from
-// layout.js and places.js. Repeated props are instanced and static parts merged to keep draw
+// The town: sky, terrain, roads, square, ramps, trees, benches and the rim, built from
+// layout.js and places.js (the buildings themselves come from models.js). Repeated props are instanced and static parts merged to keep draw
 // calls low. Every solid thing registers a collider in `colliders` (see physics.js shapes).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PLOT_HALF, ROADS, PLAZA, FOUNTAIN, RAMPS, PARK, START, WELCOME_SIGN, ROAD_WIDTH } from './layout.js';
+import { PLOT_HALF, PLOT_CORNER, ROADS, PLAZA, FOUNTAIN, RAMPS, PARK, START, WELCOME_SIGN, ROAD_WIDTH } from './layout.js';
 import { PLACES, RING_RADIUS, ringCentre, footprintRect } from './places.js';
-import { groundHeight, circleOverlapsRect, rectsOverlap, rampFootprint } from './physics.js';
+import { groundHeight, circleOverlapsRect, rectsOverlap, rampFootprint, plotDistance } from './physics.js';
+import { rimTrees, rimHills } from './rim.js';
+import { TOWNSFOLK } from './walkers.js';
 
 export const COLOURS = {
-  skyTop: '#9fd3ff', horizon: '#ffd9b0',
+  skyTop: '#9fd3ff', skyMid: '#cfe8fb', horizon: '#ffd9b0',
   grass: '#7cb860', grassDark: '#5f9a48',
   road: '#4a4547', line: '#f5f1ee', kerb: '#d8d0c8',
   coral: '#e8735a', mustard: '#f2c14e', teal: '#5bb5a2', lilac: '#8f7ad8', cream: '#f5f1ee',
   stone: '#dccbb4', stoneDark: '#c9b496', trunk: '#8a5a3b', ink: '#2c2526',
 };
 
-// Placeholder colour per model until task 2 draws the real buildings.
-const PLACEHOLDER = {
-  gym: { wall: COLOURS.coral, height: 7 },
-  condo: { wall: COLOURS.teal, height: 16 },
-  studio: { wall: COLOURS.lilac, height: 7 },
-  house: { wall: COLOURS.cream, height: 5 },
-  'post-office': { wall: COLOURS.mustard, height: 5 },
-  site: { wall: COLOURS.mustard, height: 1.4 },
-};
-
 /** Builders for each place model: (place) => Object3D in local space, door facing +z. */
 export const MODEL_BUILDERS = {};
 
-const material = (opts = {}) => new THREE.MeshLambertMaterial({ flatShading: true, ...opts });
+export const material = (opts = {}) => new THREE.MeshLambertMaterial({ flatShading: true, ...opts });
 const shade = (hex, k) => new THREE.Color(hex).multiplyScalar(k);
 
 /** Merge [{ geo, color }] into one non-indexed geometry with vertex colours. */
@@ -72,16 +64,23 @@ export function buildWorld(scene) {
   // Sky dome and fog share the horizon colour so the edge melts away.
   scene.fog = new THREE.Fog(COLOURS.horizon, 80, 250);
   scene.background = new THREE.Color(COLOURS.horizon);
+  // Three stops mixed in sRGB (so the warm horizon doesn't grey the blue): horizon, a pale
+  // blue at about 7 degrees up, full sky blue from about 20 degrees.
+  const srgb = (hex) => new THREE.Vector3(...['1', '3', '5'].map((i) => parseInt(hex.slice(+i, +i + 2), 16) / 255));
   const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(500, 24, 12),
+    new THREE.SphereGeometry(500, 32, 16),
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { top: { value: new THREE.Color(COLOURS.skyTop) }, bottom: { value: new THREE.Color(COLOURS.horizon) } },
+      uniforms: { top: { value: srgb(COLOURS.skyTop) }, mid: { value: srgb(COLOURS.skyMid) }, bottom: { value: srgb(COLOURS.horizon) } },
       vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      // Writes sRGB directly (no colorspace include): the stops are already sRGB.
       fragmentShader: [
-        'uniform vec3 top; uniform vec3 bottom; varying vec3 vDir;',
-        'void main(){ float t = pow(clamp(vDir.y, 0.0, 1.0), 0.55); gl_FragColor = vec4(mix(bottom, top, t), 1.0);',
-        '#include <colorspace_fragment>',
+        'uniform vec3 top; uniform vec3 mid; uniform vec3 bottom; varying vec3 vDir;',
+        'void main(){',
+        '  float y = clamp(normalize(vDir).y, 0.0, 1.0);',
+        '  vec3 c = mix(bottom, mid, smoothstep(0.0, 0.12, y));',
+        '  c = mix(c, top, smoothstep(0.12, 0.35, y));',
+        '  gl_FragColor = vec4(c, 1.0);',
         '}',
       ].join('\n'),
     }),
@@ -126,7 +125,8 @@ export function buildWorld(scene) {
     placeRects.some((rect) => circleOverlapsRect(x, z, r + 2, rect)) ||
     rings.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < RING_RADIUS + r + 2) ||
     rampZones.some((rect) => circleOverlapsRect(x, z, r + 1, rect)) ||
-    Math.hypot(x - WELCOME_SIGN.x, z - WELCOME_SIGN.z) < r + 4;
+    Math.hypot(x - WELCOME_SIGN.x, z - WELCOME_SIGN.z) < r + 4 ||
+    plotDistance(x, z) > -(r + 3);
 
   buildGround(scene, rand, vertexMat);
   buildRoads(scene, vertexMat);
@@ -136,6 +136,7 @@ export function buildWorld(scene) {
   const props = [];
   buildLampPosts(scene, colliders, blocked, props);
   buildTrees(scene, colliders, rand, blocked, props);
+  buildBenches(scene, colliders, props);
   buildRim(scene, rand, vertexMat);
 
   return {
@@ -144,6 +145,7 @@ export function buildWorld(scene) {
     roads: ROADS,
     places: PLACES,
     plotHalf: PLOT_HALF,
+    plotCorner: PLOT_CORNER,
     start: START,
     sun,
     groundHeightAt: (x, z) => groundHeight(x, z, RAMPS),
@@ -329,35 +331,10 @@ function buildRamps(scene, mat) {
   scene.add(mesh);
 }
 
-function placeholderModel(place) {
-  const [w, d] = place.footprint;
-  const look = PLACEHOLDER[place.model] ?? { wall: COLOURS.cream, height: 5 };
-  const h = look.height;
-  let parts;
-  if (place.model === 'site') {
-    // Low fence round a dirt plot.
-    parts = [
-      { geo: box(w - 0.4, 0.05, d - 0.4, 0, 0.04, 0), color: '#b88a5a' },
-      { geo: box(w, h, 0.2, 0, h / 2, -d / 2), color: look.wall },
-      { geo: box(w, h, 0.2, 0, h / 2, d / 2), color: look.wall },
-      { geo: box(0.2, h, d, -w / 2, h / 2, 0), color: look.wall },
-      { geo: box(0.2, h, d, w / 2, h / 2, 0), color: look.wall },
-    ];
-  } else {
-    parts = [
-      { geo: box(w, h, d, 0, h / 2, 0), color: look.wall },
-      { geo: box(w + 0.6, 0.5, d + 0.6, 0, h + 0.25, 0), color: shade(look.wall, 0.72) },
-      { geo: box(2.2, 3, 0.2, 0, 1.5, d / 2 + 0.05), color: COLOURS.ink }, // door, on local +z
-    ];
-  }
-  const mesh = new THREE.Mesh(mergeColoured(parts), material({ vertexColors: true }));
-  mesh.castShadow = mesh.receiveShadow = true;
-  return mesh;
-}
-
 function buildPlaces(scene, colliders) {
   for (const place of PLACES) {
-    const builder = MODEL_BUILDERS[place.model] ?? placeholderModel;
+    const builder = MODEL_BUILDERS[place.model];
+    if (!builder) throw new Error(`No model for ${place.model}: import models.js before buildWorld()`);
     const obj = builder(place);
     obj.position.set(place.position[0], 0, place.position[1]);
     obj.rotation.y = place.rotation;
@@ -394,7 +371,7 @@ function buildLampPosts(scene, colliders, blocked, props) {
       for (let s = -len / 2 + 9 + (side > 0 ? 9 : 0); s < len / 2 - 6; s += 18) {
         const x = alongX ? road.x + s : road.x + side * off;
         const z = alongX ? road.z + side * off : road.z + s;
-        if (blocked(x, z, 0.4) || tooClose(x, z) || Math.max(Math.abs(x), Math.abs(z)) > PLOT_HALF - 2) continue;
+        if (blocked(x, z, 0.4) || tooClose(x, z)) continue;
         // Arm reaches over the road.
         const rot = alongX ? (side > 0 ? Math.PI : 0) : (side > 0 ? -Math.PI / 2 : Math.PI / 2);
         spots.push({ x, z, rot });
@@ -426,7 +403,7 @@ function buildTrees(scene, colliders, rand, blocked, props) {
   const inPark = (x, z) => Math.abs(x - PARK.x) < PARK.w / 2 && Math.abs(z - PARK.z) < PARK.d / 2;
   let tries = 0;
   while (trunks.length < 150 && tries++ < 6000) {
-    const x = (rand() * 2 - 1) * (PLOT_HALF - 4), z = (rand() * 2 - 1) * (PLOT_HALF - 4);
+    const x = (rand() * 2 - 1) * (PLOT_HALF - 4), z = (rand() * 2 - 1) * (PLOT_HALF - 4); // blocked() keeps them off the rounded edge
     if (blocked(x, z, 1.4) || near(x, z, 4.2)) continue;
     if (inPark(x, z) && rand() < 0.6) continue; // the park stays mostly open lawn
     const s = 0.8 + rand() * 0.6;
@@ -448,33 +425,78 @@ function addTreeMeshes(scene, trunks, round, pines) {
   scene.add(instanced(pineGeo, material(), pines));
 }
 
-// Rim: low hills and trees outside the boundary so the plot has no visible edge.
-function buildRim(scene, rand, mat) {
-  const hills = [];
-  const greens = ['#6aa955', '#5f9a48', '#77b35e', '#548c45'];
-  for (let i = 0; i < 70; i++) {
-    const a = (i / 70) * Math.PI * 2 + rand() * 0.05;
-    const dx = Math.cos(a), dz = Math.sin(a);
-    const k = 1 / Math.max(Math.abs(dx), Math.abs(dz)); // walk out to a rounded square
-    const dist = (PLOT_HALF + 16 + rand() * 30) * (0.8 + 0.2 * k);
-    const r = 12 + rand() * 14;
-    const g = new THREE.IcosahedronGeometry(r, 1).scale(1, 0.32 + rand() * 0.3, 1).rotateY(rand() * 6);
-    hills.push({ geo: g.translate(dx * dist, -1.5, dz * dist), color: greens[i % greens.length] });
+// Benches: a few on the pavements facing the road, and some in the park facing the lawn. Each
+// slides along its length until it is clear of lamp posts, trees, the townsfolk's walks, the
+// rings and the ramps. Solid, but low, so the camera ignores them.
+const BENCH_SPOTS = [
+  // [x, z, rot]: rot turns the seat (local +z) to face that way.
+  [-30, 7.4, Math.PI], [30, -7.4, 0], [7.4, -38, -Math.PI / 2], [-7.4, 46, Math.PI / 2],
+  [-56, -7.4, 0], [64.6, -40, Math.PI / 2],
+  [20, 36, 0.98], [50, 58, -2.24], [24, 58, 2.4],
+];
+function buildBenches(scene, colliders, props) {
+  const nearWalk = (x, z) => TOWNSFOLK.some(({ path: [[ax, az], [bx, bz]] }) => {
+    const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (z - az) * (bz - az)) / ((bx - ax) ** 2 + (bz - az) ** 2)));
+    return Math.hypot(x - (ax + (bx - ax) * t), z - (az + (bz - az) * t)) < 2.6;
+  });
+  const taken = (x, z) =>
+    props.some((p) => Math.hypot(p.x - x, p.z - z) < 2.4) ||
+    ROADS.some((road) => circleOverlapsRect(x, z, 1.1, road)) ||
+    PLACES.some((p) => circleOverlapsRect(x, z, 1.4, footprintRect(p))) ||
+    PLACES.some((p) => { const [cx, cz] = ringCentre(p); return Math.hypot(x - cx, z - cz) < RING_RADIUS + 1.6; }) ||
+    RAMPS.some((ramp) => circleOverlapsRect(x, z, 2, rampFootprint(ramp))) ||
+    Math.hypot(x - PLAZA.x, z - PLAZA.z) < PLAZA.r + 1 ||
+    Math.hypot(x - WELCOME_SIGN.x, z - WELCOME_SIGN.z) < 5.5 ||
+    nearWalk(x, z);
+  const spots = [];
+  for (const [x0, z0, rot] of BENCH_SPOTS) {
+    const ux = Math.cos(rot), uz = -Math.sin(rot); // along the bench's length
+    let spot = null;
+    for (let t = 0; t <= 8 && !spot; t += 0.5) {
+      for (const sgn of t ? [1, -1] : [1]) {
+        const x = x0 + ux * t * sgn, z = z0 + uz * t * sgn;
+        if (!taken(x, z)) { spot = { x, z, rot }; break; }
+      }
+    }
+    if (!spot) continue;
+    spots.push(spot);
+    props.push({ x: spot.x, z: spot.z });
+    colliders.push({ type: 'box', x: spot.x, z: spot.z, hw: 1.05, hd: 0.45, rot: spot.rot, kind: 'bench' });
   }
+  const wood = '#b07a45', woodDark = '#9a6537', iron = '#3d3537';
+  const parts = [
+    { geo: box(2.0, 0.1, 0.66, 0, 0.5, 0.02), color: wood },               // seat
+    { geo: box(2.0, 0.06, 0.08, 0, 0.53, 0.32), color: woodDark },
+    { geo: box(2.0, 0.22, 0.08, 0, 0.82, -0.3), color: wood },             // back, two rails
+    { geo: box(2.0, 0.22, 0.08, 0, 1.1, -0.3), color: wood },
+    ...[-0.86, 0.86].flatMap((x) => [
+      { geo: box(0.09, 0.5, 0.09, x, 0.25, 0.26), color: iron },           // legs
+      { geo: box(0.09, 1.2, 0.09, x, 0.6, -0.3), color: iron },
+      { geo: box(0.09, 0.07, 0.62, x, 0.72, 0.0), color: iron },           // arm rest
+    ]),
+  ];
+  const mesh = instanced(mergeColoured(parts), material({ vertexColors: true }), spots);
+  mesh.name = 'benches';
+  scene.add(mesh);
+}
+
+// Rim: low hills and trees just outside the boundary (rim.js keeps them out of the plot and
+// round its rounded corners), so the town has no visible edge and nothing solid looks drivable.
+function buildRim(scene, rand, mat) {
+  const greens = ['#6aa955', '#5f9a48', '#77b35e', '#548c45'];
+  const hills = rimHills(rand, 70).map((h, i) => ({
+    geo: new THREE.IcosahedronGeometry(h.r, 1).scale(1, h.sy, 1).rotateY(h.rot).translate(h.x, -1.5, h.z),
+    color: greens[i % greens.length],
+  }));
   const hillMesh = new THREE.Mesh(mergeColoured(hills), mat);
   hillMesh.receiveShadow = true;
   scene.add(hillMesh);
 
   const trunks = [], round = [], pines = [];
   const leaf = ['#4f9a4a', '#3f8a48', '#5aa652'].map((c) => new THREE.Color(c));
-  for (let i = 0; i < 120; i++) {
-    const a = rand() * Math.PI * 2;
-    const dx = Math.cos(a), dz = Math.sin(a);
-    const k = 1 / Math.max(Math.abs(dx), Math.abs(dz));
-    const dist = (PLOT_HALF + 4 + rand() * 14) * (0.85 + 0.15 * k);
-    const x = dx * dist, z = dz * dist, s = 1 + rand() * 0.8;
-    trunks.push({ x, z, s });
-    (rand() < 0.5 ? pines : round).push({ x, z, s, rot: rand() * 6, color: leaf[i % 3] });
-  }
+  rimTrees(rand, 120).forEach((t, i) => {
+    trunks.push({ x: t.x, z: t.z, s: t.s });
+    (t.pine ? pines : round).push({ x: t.x, z: t.z, s: t.s, rot: t.rot, color: leaf[i % 3] });
+  });
   addTreeMeshes(scene, trunks, round, pines);
 }

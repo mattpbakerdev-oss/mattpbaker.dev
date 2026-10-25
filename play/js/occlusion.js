@@ -2,13 +2,18 @@
 
 /** Fraction 0..1 along a -> b where the segment first enters any shape (1 if it never does). */
 export function segmentHit(ax, az, bx, bz, shapes) {
-  let best = 1;
+  return firstHit(ax, az, bx, bz, shapes).t;
+}
+
+/** Like segmentHit, but also says which shape was hit: { t, shape } (shape null if none). */
+export function firstHit(ax, az, bx, bz, shapes) {
+  let best = 1, hit = null;
   const dx = bx - ax, dz = bz - az;
   for (const s of shapes) {
     const t = s.type === 'circle' ? circleHit(ax, az, dx, dz, s) : boxHit(ax, az, dx, dz, s);
-    if (t !== null && t < best) best = t;
+    if (t !== null && t < best) { best = t; hit = s; }
   }
-  return best;
+  return { t: best, shape: hit };
 }
 
 function circleHit(ax, az, dx, dz, c) {
@@ -50,10 +55,10 @@ export function cameraOccluders(colliders, pad = 0.5) {
   const out = [];
   for (const c of colliders) {
     if (c.kind === 'building' && !String(c.id ?? '').startsWith('site')) {
-      out.push({ type: 'box', x: c.x, z: c.z, hw: c.hw + pad, hd: c.hd + pad, rot: c.rot });
+      out.push({ type: 'box', x: c.x, z: c.z, hw: c.hw + pad, hd: c.hd + pad, rot: c.rot, kind: 'building' });
     } else if (c.kind === 'tree') {
       const scale = (c.r - 0.15) / 0.45; // world.js: r = 0.45 * scale + 0.15
-      out.push({ type: 'circle', x: c.x, z: c.z, r: 1.6 * scale + pad * 0.4 });
+      out.push({ type: 'circle', x: c.x, z: c.z, r: 1.6 * scale + pad * 0.4, kind: 'tree' });
     }
   }
   return out;

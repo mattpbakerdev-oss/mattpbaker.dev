@@ -155,7 +155,7 @@ export class Car {
     const { x, z, hits } = resolveCollisions(nx, nz, T.radius, this.world.colliders);
     nx = x; nz = z;
     const normals = hits.map((h) => [h.nx, h.nz]);
-    const edge = clampToPlot(nx, nz, T.radius, this.world.plotHalf);
+    const edge = clampToPlot(nx, nz, T.radius, this.world.plotHalf, this.world.plotCorner);
     if (edge.hit) { nx = edge.x; nz = edge.z; normals.push([edge.nx, edge.nz]); }
 
     // A ramp's side or tall end is a wall: too big a step up means we stay put and bounce.

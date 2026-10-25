@@ -1,6 +1,7 @@
 // DATA: every place in Mattsville. Adding a project means adding one object here.
 // position is the building centre; rotation turns the door (local +z) to face its road.
 // footprint is [width, depth] of the plot the model fills. Copy comes from /work/* pages.
+// A link with primary: true gets the amber button; otherwise the first link does.
 
 export const KINDS = ['project', 'about', 'contact', 'soon'];
 export const RING_RADIUS = 3.5;
@@ -77,9 +78,9 @@ export const PLACES = [
     ],
     tech: ['TypeScript', 'Remotion', 'whisper.cpp', 'Python', 'ffmpeg'],
     links: [
+      { label: 'Read the full write-up', href: '/work/ugc-pipeline', primary: true },
       { label: 'Source on GitHub', href: 'https://github.com/mattpbakerdev-oss/ugc-shorts-pipeline' },
       { label: 'Watch on TikTok', href: 'https://www.tiktok.com/@postizwithmatt/video/7694395558743510274' },
-      { label: 'Read the full write-up', href: '/work/ugc-pipeline' },
     ],
   },
   {
@@ -105,6 +106,7 @@ export const PLACES = [
     position: [48, 16.5], rotation: NORTH, footprint: [10, 8],
     title: 'Post office',
     body: ['Looking for a product role, or want something built? Drop me a line.'],
+    email: 'mattpbakerdev@gmail.com', // shown as text with a Copy button
     links: [
       { label: 'Email me', href: 'mailto:mattpbakerdev@gmail.com' },
       { label: 'GitHub', href: 'https://github.com/mattpbakerdev-oss' },

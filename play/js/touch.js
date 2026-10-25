@@ -37,12 +37,13 @@ export function createTouchControls(root, input) {
     stick.addEventListener(type, (e) => { if (e.pointerId === pointerId) release(); });
   }
 
-  // Hold-style buttons: down while pressed, so the input layer sees a rising edge.
+  // Hold-style buttons: down while pressed. input.touchDown latches the press, so even a tap
+  // shorter than one frame reaches the game as a rising edge.
   for (const btn of root.querySelectorAll('[data-hold]')) {
     const field = btn.dataset.hold;
-    const up = () => { input.touch[field] = false; btn.classList.remove('is-pressed'); };
+    const up = () => { input.touchUp(field); btn.classList.remove('is-pressed'); };
     btn.addEventListener('pointerdown', (e) => {
-      input.touch[field] = true;
+      input.touchDown(field);
       btn.classList.add('is-pressed');
       btn.setPointerCapture(e.pointerId);
       e.preventDefault();
@@ -50,13 +51,16 @@ export function createTouchControls(root, input) {
     btn.addEventListener('pointerup', up);
     btn.addEventListener('pointercancel', up);
     btn.addEventListener('lostpointercapture', up);
-    // Keyboard or switch access fires click without pointer events: pulse the button.
+    // Keyboard or switch access fires click without pointer events: a one-frame tap.
     btn.addEventListener('click', (e) => {
       if (e.detail !== 0) return;
-      input.touch[field] = true;
-      setTimeout(() => { input.touch[field] = false; }, 120);
+      input.touchDown(field);
+      input.touchUp(field);
     });
     btn.addEventListener('contextmenu', (e) => e.preventDefault());
+    // No click from a tap: the panel it opens puts the scrim under the finger, and that click
+    // would close it again straight away.
+    btn.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
   }
 
   return { release };

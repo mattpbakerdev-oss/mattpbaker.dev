@@ -1,7 +1,7 @@
 // Pure helpers for the places layer: which ring the car is in, and where fast travel drops it.
 // No three.js, so node can test them.
 import { RING_RADIUS, ringCentre } from './places.js';
-import { resolveCollisions, pointInRect, nearestRoadPoint } from './physics.js';
+import { resolveCollisions, pointInRect, nearestRoadPoint, wrapAngle } from './physics.js';
 
 /** Leaving needs a little more distance than entering, so the prompt never flickers at the edge. */
 export const RING_EXIT = RING_RADIUS + 1;
@@ -24,8 +24,6 @@ export function placeInRange(x, z, places, current = null) {
   return best;
 }
 
-const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-
 /**
  * Fast-travel spot for a place: on the road just beyond its ring, facing the door, clear of
  * every collider. Walks out from the ring along the door's direction, then sideways if needed.
@@ -33,7 +31,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 export function travelSpot(place, roads, colliders, carRadius = 1.35) {
   const [cx, cz] = ringCentre(place);
   const fx = Math.sin(place.rotation), fz = Math.cos(place.rotation);
-  const heading = wrap(place.rotation + Math.PI);
+  const heading = wrapAngle(place.rotation + Math.PI);
   const clear = (x, z) =>
     roads.some((r) => pointInRect(x, z, r, carRadius)) &&
     resolveCollisions(x, z, carRadius, colliders, 1).hits.length === 0;

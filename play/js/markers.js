@@ -1,8 +1,10 @@
 // Amber markers, like Hit & Run's mission markers: a glowing ring on the ground outside each
 // door and a floating gem above it. Both are instanced, so all places cost two draw calls.
-// Visited places dim; the place the car is in brightens. Static under reduced motion.
+// Visited places dim; the place the car is in brightens. Static under reduced motion. A gem
+// shrinks away when the camera comes within about 4 units, so the lens never sits inside one.
 import * as THREE from 'three';
 import { RING_RADIUS, ringCentre } from './places.js';
+import { gemScale } from './camrig.js';
 
 const AMBER = '#E0A94A';
 const ICON_HEIGHT = 4.1; // just above the door
@@ -45,7 +47,7 @@ export function createMarkers(scene, places, { reducedMotion = false } = {}) {
   const spots = places.map((p) => {
     const [rx, rz] = ringCentre(p);
     const out = p.footprint[1] / 2 + 1.2; // just in front of the door
-    return { rx, rz, ix: p.position[0] + Math.sin(p.rotation) * out, iz: p.position[1] + Math.cos(p.rotation) * out, phase: p.position[0] * 0.13 };
+    return { rx, rz, ix: p.position[0] + Math.sin(p.rotation) * out, iz: p.position[1] + Math.cos(p.rotation) * out, phase: p.position[0] * 0.13, size: 1 };
   });
   spots.forEach((s, i) => {
     rings.setMatrixAt(i, m.compose(pos.set(s.rx, 0.09, s.rz), q.identity(), one));
@@ -58,8 +60,8 @@ export function createMarkers(scene, places, { reducedMotion = false } = {}) {
   let t = 0;
   return {
     rings, icons,
-    /** activeId: the place the car is in (or null). visited: Set of ids. */
-    update(dt, activeId, visited) {
+    /** activeId: the place the car is in (or null). visited: Set of ids. camera: to fade gems near the lens. */
+    update(dt, activeId, visited, camera = null) {
       if (!reducedMotion) t += dt;
       ringMat.opacity = reducedMotion ? 0.95 : 0.82 + Math.sin(t * 2.4) * 0.16;
       spots.forEach((s, i) => {
@@ -70,7 +72,10 @@ export function createMarkers(scene, places, { reducedMotion = false } = {}) {
         icons.setColorAt(i, colour.setScalar(visited.has(id) && !active ? 0.6 : 1));
         const bob = reducedMotion ? 0 : Math.sin(t * 2 + s.phase) * 0.28;
         q.setFromAxisAngle(up, reducedMotion ? Math.PI / 4 : t * 1.4 + s.phase);
-        icons.setMatrixAt(i, m.compose(pos.set(s.ix, ICON_HEIGHT + bob, s.iz), q, scale.setScalar(active ? 1.2 : 1)));
+        pos.set(s.ix, ICON_HEIGHT + bob, s.iz);
+        const want = camera ? gemScale(camera.position.distanceTo(pos)) : 1;
+        s.size = !dt || reducedMotion ? want : s.size + (want - s.size) * (1 - Math.exp(-12 * dt));
+        icons.setMatrixAt(i, m.compose(pos, q, scale.setScalar((active ? 1.2 : 1) * s.size)));
       });
       rings.instanceColor.needsUpdate = true;
       icons.instanceColor.needsUpdate = true;
