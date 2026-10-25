@@ -4,7 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mattsville · Matt Baker</title>
-<meta name="description" content="Drive round Mattsville, a small 3D town where each building opens one of Matt Baker's projects.">
+<meta name="description" content="Drive round a small 3D town of Matt Baker's projects: Up Lock, Listing Check and a video pipeline.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Matt Baker">
+<meta property="og:title" content="Mattsville · Matt Baker">
+<meta property="og:description" content="Drive round a small 3D town of Matt Baker's projects: Up Lock, Listing Check and a video pipeline.">
+<meta property="og:url" content="https://mattpbaker.dev/play/">
+<meta property="og:image" content="https://mattpbaker.dev/propertyscout/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#120F0F">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -64,10 +73,22 @@
       <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v10l-4 1.5-5-2-4 1.5z"/><path d="M5.5 2v10M10.5 4v10"/></svg>
       <span>Map</span><kbd class="hud-key" aria-hidden="true">M</kbd>
     </button>
-    <button type="button" class="hud-btn hud-icon" id="hud-sound" aria-pressed="false" aria-label="Sound">
-      <svg class="icon-off" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M11 6l3.5 4M14.5 6L11 10"/></svg>
-      <svg class="icon-on" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.8 5.6a3.4 3.4 0 010 4.8M12.8 3.8a6 6 0 010 8.4"/></svg>
-    </button>
+    <div class="hud-sound">
+      <button type="button" class="hud-btn hud-icon" id="hud-sound" aria-expanded="false" aria-controls="sound-menu" aria-label="Sound settings">
+        <svg class="icon-off" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M11 6l3.5 4M14.5 6L11 10"/></svg>
+        <svg class="icon-on" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.8 5.6a3.4 3.4 0 010 4.8M12.8 3.8a6 6 0 010 8.4"/></svg>
+      </button>
+      <div class="soundmenu" id="sound-menu" role="group" aria-label="Sound" hidden>
+        <button type="button" class="soundmenu-row" role="switch" aria-checked="true" data-setting="effects">
+          <span class="soundmenu-text"><span class="soundmenu-name">Effects</span><span class="soundmenu-hint">Engine, horn, bumps</span></span>
+          <span class="switch" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="soundmenu-row" role="switch" aria-checked="false" data-setting="music">
+          <span class="soundmenu-text"><span class="soundmenu-name">Music</span><span class="soundmenu-hint">A short, quiet loop</span></span>
+          <span class="switch" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
   </nav>
 </header>
 
@@ -77,6 +98,9 @@
   <span class="prompt-place" id="prompt-place"></span>
   <span class="prompt-act" id="prompt-act"></span>
 </button>
+
+<div class="tags" id="tags" aria-hidden="true"></div>
+<p class="sr-only" id="extras-live" aria-live="polite"></p>
 
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <p class="sr-only" id="announcer" aria-live="polite"></p>

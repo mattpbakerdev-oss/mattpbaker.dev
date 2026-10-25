@@ -157,8 +157,69 @@ kbd.wide { min-width: 64px; }
 .hud-key { min-width: 22px; height: 22px; padding: 0 5px; font-size: 11px; border-radius: 6px; color: var(--ink-2); }
 .hud-icon { width: 40px; padding: 0; justify-content: center; }
 .hud-icon .icon-on { display: none; }
-.hud-icon[aria-pressed="true"] .icon-on { display: block; color: var(--accent); }
-.hud-icon[aria-pressed="true"] .icon-off { display: none; }
+.hud-icon.is-on .icon-on { display: block; color: var(--accent); }
+.hud-icon.is-on .icon-off { display: none; }
+.hud-icon[aria-expanded="true"] { background: rgba(245,241,238,0.1); }
+
+/* Sound menu: a small card under the sound button with two switches. */
+.hud-sound { position: relative; display: flex; }
+.soundmenu {
+  position: absolute; top: calc(100% + 12px); right: -6px; width: 248px; padding: 6px;
+  border-radius: 18px; border: 1px solid var(--line);
+  background: rgba(28,23,23,0.96); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 16px 36px -14px rgba(0,0,0,0.65);
+  transform-origin: calc(100% - 26px) 0; opacity: 0; transform: translateY(-4px) scale(0.97);
+  transition: opacity .16s var(--ease-out), transform .18s var(--ease-out);
+}
+.soundmenu.is-open { opacity: 1; transform: none; }
+.soundmenu-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%;
+  min-height: 56px; padding: 8px 12px 8px 14px; border: 0; border-radius: 13px;
+  background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit;
+  transition: background-color .15s;
+}
+.soundmenu-row:hover { background: rgba(245,241,238,0.06); }
+.soundmenu-row:focus-visible { outline-offset: -2px; border-radius: 13px; }
+.soundmenu-text { display: grid; gap: 3px; }
+.soundmenu-name { font: 600 15px/1.2 var(--sans); }
+.soundmenu-hint { font: 400 13px/1.3 var(--sans); color: var(--ink-2); }
+.switch {
+  position: relative; flex: none; width: 40px; height: 24px; border-radius: 999px;
+  background: rgba(245,241,238,0.16); transition: background-color .18s var(--ease-out);
+}
+.switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform .18s var(--ease-out);
+}
+[aria-checked="true"] > .switch { background: var(--accent); }
+[aria-checked="true"] > .switch::after { transform: translateX(16px); background: #fff8ec; }
+
+/* ---------- Floating sign labels and speech bubbles ---------- */
+.tags { position: fixed; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+.is-paused .tags { visibility: hidden; }
+.tag {
+  position: absolute; left: 0; top: 0; will-change: transform;
+}
+.tag-card {
+  max-width: 232px; padding: 9px 14px 10px; border-radius: 14px; text-align: center; text-wrap: balance;
+  font: 500 15px/1.35 var(--sans); transform: translate(-50%, -100%); transform-origin: 50% 100%;
+  opacity: 0; transition: opacity .2s var(--ease-out), scale .2s var(--ease-out); scale: 0.96;
+}
+.tag.is-shown .tag-card { opacity: 1; scale: 1; }
+.tag-sign .tag-card {
+  background: rgba(28,23,23,0.9); color: var(--ink); border: 1px solid rgba(224,169,74,0.38);
+  box-shadow: 0 10px 26px -12px rgba(0,0,0,0.6);
+}
+.tag-say .tag-card {
+  background: #fbf8f2; color: #2c2526; border-radius: 16px 16px 16px 16px;
+  box-shadow: 0 10px 24px -10px rgba(0,0,0,0.45);
+}
+.tag-say .tag-card::after {
+  content: ""; position: absolute; left: calc(50% + var(--tail, 0px)); bottom: -7px; width: 14px; height: 14px; margin-left: -7px;
+  background: #fbf8f2; transform: rotate(45deg); border-radius: 0 0 3px 0;
+}
+.tag-say.is-oi .tag-card { font-weight: 700; font-size: 18px; padding: 7px 14px 8px; }
+@media (max-width: 719px) { .tag-card { max-width: 200px; font-size: 14px; } }
 
 /* ---------- Minimap (desktop only) ---------- */
 .minimap {
@@ -428,6 +489,9 @@ kbd.wide { min-width: 64px; }
   .mapdlg, .mapdlg.is-open, .howto, .howto.is-open { transform: translate(-50%, -50%); }
   .prompt, .prompt.is-shown { transform: translate(-50%, 0); }
   .toast { transform: none; }
+  .soundmenu, .soundmenu.is-open { transform: none; transition: opacity .15s linear; }
+  .tag-card, .tag.is-shown .tag-card { scale: 1; transition: opacity .2s linear; }
+  .switch, .switch::after { transition: none; }
   @media (max-width: 719px) {
     .panel:not(.is-open), .mapdlg:not(.is-open) { opacity: 0; }
     .mapdlg, .mapdlg.is-open { transform: none; }

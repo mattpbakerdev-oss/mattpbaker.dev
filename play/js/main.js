@@ -8,6 +8,9 @@ import { createUI } from './ui.js';
 import { Car } from './car.js';
 import { createInput } from './input.js';
 import { createChaseCamera } from './camera.js';
+import { cameraOccluders } from './occlusion.js';
+import { createExtras } from './extras.js';
+import { createAudio } from './audio.js';
 
 const MAX_PIXEL_RATIO = 1.75;
 const MAX_DT = 0.05;   // clamp long frames (tab switches) so the car never tunnels
@@ -89,7 +92,7 @@ async function boot() {
 
   const car = new Car(world);
   scene.add(car.object);
-  const chase = createChaseCamera(camera, car, { reducedMotion });
+  const chase = createChaseCamera(camera, car, { reducedMotion, occluders: cameraOccluders(world.colliders) });
   chase.snap();
   const input = createInput(window);
   input.setEnabled(false);
@@ -101,6 +104,8 @@ async function boot() {
   car.onLand = (impact) => emit('land', { impact });
   const ui = createUI({ car, chase, world, input, events, canvas, reducedMotion });
   markers.update(0, null, ui.visited);
+  const extras = createExtras({ scene, camera, world, car, events, ui, reducedMotion });
+  const audio = createAudio({ events, car, ui });
 
   world.update(0, car.position, camera);
   await renderer.compileAsync(scene, camera).catch(() => {});
@@ -129,13 +134,15 @@ async function boot() {
     chase.update(dt);
     ui.update(dt);
     markers.update(dt, ui.active?.id ?? null, ui.visited);
+    extras.update(dt, ui.isOpen);
+    audio.update(input.state);
     world.update(dt, car.position, camera);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame((t) => { last = t; frame(t); });
 
-  window.__game = { renderer, scene, camera, car, world, input, chase, events, ui, markers };
+  window.__game = { renderer, scene, camera, car, world, input, chase, events, ui, markers, extras, audio };
 
   status.textContent = 'Mattsville is ready';
   loader.classList.add('is-ready');

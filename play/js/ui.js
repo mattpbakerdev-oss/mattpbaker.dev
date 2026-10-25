@@ -3,7 +3,7 @@
 //
 // Events fired on `events` for other layers (audio, extras):
 //   panel-open { place }, panel-close { place }, visit { place, first }, travel { place },
-//   map-open, map-close, sound { on }
+//   map-open, map-close, menu-open, sound { effects, music, on }
 import { PLACES } from './places.js';
 import { placeInRange, travelSpot } from './proximity.js';
 import { drawStatic, drawDynamic, drawLabels, placeAtMapPoint, MODEL_COLOUR } from './mapdraw.js';
@@ -78,6 +78,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     const replacing = open && open !== el;
     if (replacing) closeDialog({ restore: false }); // e.g. "Open the map" from a panel
     clearTimeout(el._hideTimer);
+    closeSoundMenu();
     if (!replacing) lastFocus = document.activeElement;
     open = el;
     el._onClose = onClose;
@@ -329,14 +330,51 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
   });
   events.addEventListener('map', () => { if (!open) openMap(); });
 
-  let soundOn = false;
-  function setSound(on) {
-    soundOn = on;
-    soundBtn.setAttribute('aria-pressed', String(on));
-    soundBtn.setAttribute('aria-label', on ? 'Sound on' : 'Sound off');
+  // ---------- Sound menu: Effects and Music switches under the HUD sound button ----------
+  // The menu only reports choices (`sound` { effects, music }); audio.js owns the settings
+  // and calls setSound() back so the switches and the icon always show what is playing.
+  const soundMenu = $('sound-menu');
+  let sound = { effects: true, music: false };
+  function setSound(next) {
+    sound = { ...sound, ...next };
+    const on = sound.effects || sound.music;
+    soundBtn.classList.toggle('is-on', on);
+    soundBtn.setAttribute('aria-label', `Sound settings, ${on ? 'sound on' : 'sound off'}`);
+    for (const row of soundMenu.querySelectorAll('[data-setting]')) row.setAttribute('aria-checked', String(Boolean(sound[row.dataset.setting])));
   }
-  setSound(false);
-  soundBtn.addEventListener('click', () => { setSound(!soundOn); emit('sound', { on: soundOn }); });
+  function openSoundMenu() {
+    soundMenu.hidden = false;
+    void soundMenu.offsetWidth;
+    soundMenu.classList.add('is-open');
+    soundBtn.setAttribute('aria-expanded', 'true');
+    soundMenu.querySelector('[data-setting]').focus({ preventScroll: true });
+    emit('menu-open');
+  }
+  function closeSoundMenu({ restore = false } = {}) {
+    if (soundMenu.hidden) return;
+    soundMenu.classList.remove('is-open');
+    soundBtn.setAttribute('aria-expanded', 'false');
+    soundMenu.hidden = true;
+    if (restore) soundBtn.focus({ preventScroll: true });
+  }
+  soundBtn.addEventListener('click', () => (soundMenu.hidden ? openSoundMenu() : closeSoundMenu()));
+  soundMenu.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-setting]');
+    if (!row) return;
+    setSound({ [row.dataset.setting]: !sound[row.dataset.setting] });
+    emit('sound', { ...sound, on: sound.effects || sound.music });
+  });
+  soundMenu.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSoundMenu({ restore: true }); }
+    const rows = [...soundMenu.querySelectorAll('[data-setting]')];
+    const i = rows.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); rows[(i + (e.key === 'ArrowDown' ? 1 : rows.length - 1)) % rows.length].focus(); }
+  });
+  // Clicking or tapping anywhere else closes it.
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.hud-sound')) closeSoundMenu(); });
+  // Tabbing out closes it. (A click elsewhere is handled above; Safari gives clicks no focus.)
+  soundMenu.addEventListener('focusout', (e) => { if (e.relatedTarget instanceof Element && !e.relatedTarget.closest('.hud-sound')) closeSoundMenu(); });
+  setSound(sound);
 
   function setFound(n, total = 4) { $('hud-found').textContent = `Found ${n} of ${total}`; }
 
@@ -398,6 +436,6 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
       if (!open && now && prompt.hidden) setPrompt(now);
       drawMinimap();
     },
-    openPanel, openMap, closeDialog, travel, toast, setFound, setSound,
+    openPanel, openMap, closeDialog, travel, toast, setFound, setSound, closeSoundMenu,
   };
 }

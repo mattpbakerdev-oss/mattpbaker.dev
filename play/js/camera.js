@@ -1,7 +1,14 @@
-// Smooth chase camera: behind and above the car, pulling back a little with speed.
+// Smooth chase camera: behind and above the car, pulling back a little with speed. When a
+// building or tree sits between the car and the camera, the camera slides in towards the car
+// (2D test against the colliders in occlusion.js) so it never sits inside or behind them.
 import * as THREE from 'three';
+import { segmentHit } from './occlusion.js';
 
-export function createChaseCamera(camera, car, { reducedMotion = false } = {}) {
+const MIN_DIST = 2.6;   // never closer to the car than this
+const LOOKAHEAD = 3;    // start easing in this far before the geometry
+const CLEAR = 0.6;      // gap kept between the lens and the geometry
+
+export function createChaseCamera(camera, car, { reducedMotion = false, occluders = [] } = {}) {
   const pos = new THREE.Vector3();
   const look = new THREE.Vector3();
   const desired = new THREE.Vector3();
@@ -9,6 +16,18 @@ export function createChaseCamera(camera, car, { reducedMotion = false } = {}) {
   const shake = new THREE.Vector3();
   const shakeVel = new THREE.Vector3();
   let heading = car.heading;
+  let clip = Infinity;     // smoothed distance limit from the car
+  let pulled = 0;          // 0..1, how far the camera has been pulled in (lifts it a little)
+
+  /** How far behind the car (horizontally) the camera may sit along its current bearing. */
+  function limits(ox, oz, len) {
+    if (!occluders.length || len < 0.01) return { hard: Infinity, soft: Infinity };
+    const ux = ox / len, uz = oz / len, reach = len + LOOKAHEAD;
+    const t = segmentHit(car.x, car.z, car.x + ux * reach, car.z + uz * reach, occluders);
+    if (t >= 1) return { hard: Infinity, soft: Infinity };
+    const hit = t * reach;
+    return { hard: Math.max(MIN_DIST, hit - CLEAR), soft: Math.max(MIN_DIST, hit - LOOKAHEAD) };
+  }
 
   const target = () => {
     const speed = Math.abs(car.speed);
@@ -27,7 +46,8 @@ export function createChaseCamera(camera, car, { reducedMotion = false } = {}) {
       pos.copy(desired);
       look.copy(desiredLook);
       shake.set(0, 0, 0); shakeVel.set(0, 0, 0);
-      api.apply();
+      clip = Infinity;
+      api.apply(0);
     },
     /** A small knock away from whatever the car hit. Skipped with reduced motion. */
     nudge(strength, nx = 0, nz = 0) {
@@ -44,10 +64,25 @@ export function createChaseCamera(camera, car, { reducedMotion = false } = {}) {
       look.lerp(desiredLook, 1 - Math.exp(-9 * dt));
       shakeVel.addScaledVector(shake, -260 * dt).multiplyScalar(Math.exp(-14 * dt));
       shake.addScaledVector(shakeVel, dt);
-      api.apply();
+      api.apply(dt);
     },
-    apply() {
+    apply(dt = 0) {
       camera.position.copy(pos).add(shake);
+      const ox = camera.position.x - car.x, oz = camera.position.z - car.z;
+      const len = Math.hypot(ox, oz);
+      const { hard, soft } = limits(ox, oz, len);
+      // Ease in as geometry approaches, ease back out slowly once it's gone, never past `hard`.
+      const want = Math.min(soft, len + 4);
+      if (!dt || !Number.isFinite(clip)) clip = want;
+      else clip += (want - clip) * (1 - Math.exp(-(want < clip ? 10 : 2.5) * dt));
+      const d = Math.min(len, clip, hard);
+      if (d < len) {
+        camera.position.x = car.x + (ox / len) * d;
+        camera.position.z = car.z + (oz / len) * d;
+      }
+      const tuck = len > 0 ? 1 - d / len : 0;
+      pulled += (tuck - pulled) * (dt ? 1 - Math.exp(-6 * dt) : 1);
+      camera.position.y += pulled * 2.6; // look down over the car when tucked in
       camera.position.y = Math.max(camera.position.y, car.world.groundHeightAt(camera.position.x, camera.position.z) + 1);
       camera.lookAt(look);
     },

@@ -5,3 +5,8 @@ import './places.test.mjs';
 import './input.test.mjs';
 import './proximity.test.mjs';
 import './joystick.test.mjs';
+import './collect.test.mjs';
+import './tumble.test.mjs';
+import './walkers.test.mjs';
+import './occlusion.test.mjs';
+import './audio.test.mjs';

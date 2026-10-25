@@ -1,0 +1,60 @@
+// Pure 2D (x, z) checks that keep the chase camera out of buildings and trees. No three.js.
+
+/** Fraction 0..1 along a -> b where the segment first enters any shape (1 if it never does). */
+export function segmentHit(ax, az, bx, bz, shapes) {
+  let best = 1;
+  const dx = bx - ax, dz = bz - az;
+  for (const s of shapes) {
+    const t = s.type === 'circle' ? circleHit(ax, az, dx, dz, s) : boxHit(ax, az, dx, dz, s);
+    if (t !== null && t < best) best = t;
+  }
+  return best;
+}
+
+function circleHit(ax, az, dx, dz, c) {
+  const fx = ax - c.x, fz = az - c.z;
+  const cc = fx * fx + fz * fz - c.r * c.r;
+  if (cc <= 0) return null; // starts inside: ignore rather than collapse onto the car
+  const a = dx * dx + dz * dz;
+  if (a < 1e-12) return null;
+  const b = 2 * (fx * dx + fz * dz);
+  const disc = b * b - 4 * a * cc;
+  if (disc < 0) return null;
+  const t = (-b - Math.sqrt(disc)) / (2 * a);
+  return t >= 0 && t <= 1 ? t : null;
+}
+
+function boxHit(ax, az, dx, dz, box) {
+  // Into the box's own frame (same rotation convention as physics.js).
+  const cos = Math.cos(box.rot || 0), sin = Math.sin(box.rot || 0);
+  const wx = ax - box.x, wz = az - box.z;
+  const ox = wx * cos - wz * sin, oz = wx * sin + wz * cos;
+  const vx = dx * cos - dz * sin, vz = dx * sin + dz * cos;
+  if (Math.abs(ox) < box.hw && Math.abs(oz) < box.hd) return null;
+  let t0 = 0, t1 = 1;
+  for (const [o, v, h] of [[ox, vx, box.hw], [oz, vz, box.hd]]) {
+    if (Math.abs(v) < 1e-12) { if (Math.abs(o) > h) return null; continue; }
+    let ta = (-h - o) / v, tb = (h - o) / v;
+    if (ta > tb) [ta, tb] = [tb, ta];
+    t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+    if (t0 > t1) return null;
+  }
+  return t0;
+}
+
+/**
+ * The colliders tall enough to hide the car: buildings (not the low building-site fences) and
+ * trees, whose canopy is far wider than the trunk collider. Padded so the lens stays clear.
+ */
+export function cameraOccluders(colliders, pad = 0.5) {
+  const out = [];
+  for (const c of colliders) {
+    if (c.kind === 'building' && !String(c.id ?? '').startsWith('site')) {
+      out.push({ type: 'box', x: c.x, z: c.z, hw: c.hw + pad, hd: c.hd + pad, rot: c.rot });
+    } else if (c.kind === 'tree') {
+      const scale = (c.r - 0.15) / 0.45; // world.js: r = 0.45 * scale + 0.15
+      out.push({ type: 'circle', x: c.x, z: c.z, r: 1.6 * scale + pad * 0.4 });
+    }
+  }
+  return out;
+}
