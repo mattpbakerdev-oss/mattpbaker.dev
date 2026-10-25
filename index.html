@@ -243,6 +243,27 @@
   .prose p b { color: var(--ink); font-weight: 500; }
 
   /* Footer */
+  /* Drive strip: the /play game, under the work cards */
+  .drive {
+    margin-top: 20px; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 24px;
+    background: var(--bg-raised); border-radius: var(--radius-card); padding: 14px 26px 14px 26px;
+    transition: background-color .2s;
+  }
+  .drive:hover { background: #211b1b; }
+  .drive-text { display: grid; gap: 2px; }
+  .drive-title { font-size: 1.1rem; font-weight: 500; }
+  .drive-sub { color: var(--ink-2); font-size: 0.95rem; }
+  .drive-shot { width: 168px; aspect-ratio: 1200 / 630; border-radius: 12px; overflow: hidden; }
+  .drive-shot img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+  .drive:hover .drive-shot img { transform: scale(1.04); }
+  .drive .arrow { color: var(--accent); width: 22px; height: 22px; transition: transform .2s; }
+  .drive:hover .arrow { transform: translateX(3px); }
+  @media (max-width: 720px) {
+    .drive { grid-template-columns: 1fr auto; gap: 16px; padding: 14px 18px; }
+    .drive-shot { grid-row: 1; grid-column: 1 / -1; width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { .drive-shot img, .drive .arrow { transition: none; } .drive:hover .drive-shot img, .drive:hover .arrow { transform: none; } }
+
   footer { margin-top: 112px; padding: 32px 0 40px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 0.95rem; }
   footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
   footer .built { margin-left: auto; }
@@ -310,6 +331,14 @@
         <span class="ghost" aria-hidden="true">3</span>
       </a>
     </div>
+    <a class="drive" href="/play">
+      <span class="drive-text">
+        <span class="drive-title">Or drive round it</span>
+        <span class="drive-sub">The same work as a small 3D town. Pull up at a building to look inside.</span>
+      </span>
+      <span class="drive-shot" aria-hidden="true"><img src="/play/og.jpg" width="1200" height="630" alt="" loading="lazy" decoding="async"></span>
+      <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
   </section>
 
   <section class="section wrap" id="stack">
