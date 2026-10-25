@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mattsville · Matt Baker</title>
+<meta name="description" content="Drive round Mattsville, a small 3D town where each building opens one of Matt Baker's projects.">
+<meta name="theme-color" content="#120F0F">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="/play/play.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" crossorigin>
+</head>
+<body>
+<canvas id="scene" tabindex="-1" aria-label="Mattsville, a small 3D town you can drive round. Each building opens one of Matt Baker's projects. Press M for a list of every place."></canvas>
+
+<div class="loader" id="loader">
+  <main class="loader-card">
+    <h1 class="wordmark">Matt Baker</h1>
+    <p class="loader-intro">A small town of things I've built. Drive up to a building to look inside.</p>
+    <div class="loader-progress">
+      <p class="loader-status" id="loader-status" aria-live="polite">Loading Mattsville</p>
+      <div class="loader-track" role="progressbar" aria-label="Loading Mattsville" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="loader-bar" id="loader-bar"></span>
+      </div>
+      <button type="button" class="pill pill-amber" id="start" hidden>
+        Start driving
+        <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </button>
+      <a class="pill pill-amber" id="fallback-link" href="/" hidden>Go to mattpbaker.dev</a>
+    </div>
+  </main>
+  <a class="loader-exit" href="/">Prefer the normal site? <span>mattpbaker.dev</span></a>
+</div>
+
+<noscript>
+  <div class="loader is-fallback">
+    <main class="loader-card">
+      <p class="wordmark">Matt Baker</p>
+      <p class="loader-intro">Mattsville needs JavaScript to run. The normal site has everything in it.</p>
+      <a class="pill pill-amber" href="/">Go to mattpbaker.dev</a>
+    </main>
+  </div>
+</noscript>
+
+<script type="module" src="/play/js/main.js"></script>
+</body>
+</html>
