@@ -1,76 +1,76 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MIN_DIST, TUCK_LIFT, SWING, LOOK_HEIGHT, REST, PARK_EXTRA,
-  pitchDegrees, reach, pickSwing, gemScale, parkedLook, parkTarget, FRAME_HEIGHT,
+  MIN_DIST, TUCK_LIFT, LOOK_HEIGHT, REST, PARK_EXTRA, FADE_OPACITY, FADE_INSIDE,
+  pitchDegrees, chaseLimit, fadeStep, gemScale, parkedLook, parkTarget, FRAME_HEIGHT,
 } from '../js/camrig.js';
 
 const close = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 const BEHIND = Math.PI; // the camera's bearing from a car facing +z
 
-test('tucked in at the closest, the camera still looks along the road (pitch under 18 degrees)', () => {
-  assert.ok(MIN_DIST >= 3.4 && MIN_DIST <= 3.6, `MIN_DIST ${MIN_DIST}`);
+test('pulled in to the closest, the camera still sits well behind and looks along the road', () => {
+  // At MIN_DIST the car must still read from behind, not as a roof seen from above.
+  assert.ok(MIN_DIST >= 7 && MIN_DIST <= REST.dist - 0.5, `MIN_DIST ${MIN_DIST}`); // near the resting distance
   assert.ok(TUCK_LIFT <= 0.85, `TUCK_LIFT ${TUCK_LIFT}`);
   assert.ok(LOOK_HEIGHT >= 2.3 && LOOK_HEIGHT <= 2.5);
   const pitch = pitchDegrees(MIN_DIST, REST.height + TUCK_LIFT);
-  assert.ok(pitch < 18, `pitch ${pitch.toFixed(1)}`);
-  // The old numbers (2.6 away, lifted 2.6, looking at 1.3) gave a steep ~37 degree stare.
-  assert.ok(pitchDegrees(2.6, REST.height + 2.6, 4, 1.3) > 30);
+  assert.ok(pitch < 12, `pitch ${pitch.toFixed(1)}`);
+  // The old 3.5-unit tuck stared down at about 15 degrees and filled the frame with roof.
+  assert.ok(pitchDegrees(3.5, REST.height + 0.8) > 14);
 });
 
-test('reach is unlimited with nothing behind the car', () => {
-  const r = reach(0, 0, BEHIND, REST.dist, []);
-  assert.equal(r.hard, Infinity);
-  assert.equal(r.kind, null);
+test('nothing behind the car: no limit', () => {
+  assert.equal(chaseLimit(0, 0, BEHIND, REST.dist, []), Infinity);
 });
 
-test('reach stops short of a building and never comes closer than MIN_DIST', () => {
-  const wall = { type: 'box', x: 0, z: -6, hw: 6, hd: 1, rot: 0, kind: 'building' };
-  const r = reach(0, 0, BEHIND, REST.dist, [wall]);
-  assert.equal(r.kind, 'building');
-  assert.ok(r.hard < 5 && r.hard >= MIN_DIST, `hard ${r.hard}`);
-  const tight = reach(0, 0, BEHIND, REST.dist, [{ ...wall, z: -2.5, hd: 0.5 }]);
-  close(tight.hard, MIN_DIST);
+test('a building the camera can see past is faded, not pulled in for', () => {
+  // Thin wall between the car and the camera, camera clear of it on the far side.
+  const wall = { type: 'box', x: 0, z: -4, hw: 6, hd: 0.5, rot: 0, kind: 'building' };
+  assert.equal(chaseLimit(0, 0, BEHIND, REST.dist, [wall]), Infinity);
 });
 
-test('with a narrow building behind, the camera swings to a clear side', () => {
-  const block = { type: 'box', x: 0, z: -5, hw: 1.5, hd: 1, rot: 0, kind: 'building' };
-  const s = pickSwing(0, 0, BEHIND, REST.dist, [block]);
-  close(Math.abs(s), SWING);
-  close(SWING, (25 * Math.PI) / 180);
+test('a camera that would sit inside a building eases in, but never closer than MIN_DIST', () => {
+  // Wall 8.2 units behind the car (padding included), building deep: pull to just in front of it.
+  const deep = { type: 'box', x: 0, z: -13.2, hw: 6, hd: 5, rot: 0, kind: 'building' };
+  const lim = chaseLimit(0, 0, BEHIND, REST.dist, [deep]);
+  assert.ok(lim < 8 && lim >= MIN_DIST, `limit ${lim}`);
+  // Wall 2 units behind: pulling right in would put the lens on the boot, so stop at MIN_DIST
+  // and let the fade do the rest.
+  const close2 = { ...deep, z: -7 };
+  close(chaseLimit(0, 0, BEHIND, REST.dist, [close2]), MIN_DIST);
 });
 
-test('it picks the side the building does not cover', () => {
-  const offLeft = { type: 'box', x: -1.75, z: -5, hw: 2.25, hd: 1, rot: 0, kind: 'building' };
-  // Bearing PI + SWING points towards -x (the covered side), PI - SWING towards +x (clear).
-  close(pickSwing(0, 0, BEHIND, REST.dist, [offLeft]), -SWING);
-  const offRight = { ...offLeft, x: 1.75 };
-  close(pickSwing(0, 0, BEHIND, REST.dist, [offRight]), SWING);
+test('trees never pull the camera in (they fade instead)', () => {
+  const tree = { type: 'circle', x: 0, z: -8, r: 2, kind: 'tree' };
+  assert.equal(chaseLimit(0, 0, BEHIND, REST.dist, [tree]), Infinity);
 });
 
-test('no swing for open ground, for trees, or when swinging would not help', () => {
-  assert.equal(pickSwing(0, 0, BEHIND, REST.dist, []), 0);
-  const tree = { type: 'circle', x: 0, z: -5, r: 1.2, kind: 'tree' };
-  assert.equal(pickSwing(0, 0, BEHIND, REST.dist, [tree]), 0);
-  const longWall = { type: 'box', x: 0, z: -5, hw: 30, hd: 1, rot: 0, kind: 'building' };
-  assert.equal(pickSwing(0, 0, BEHIND, REST.dist, [longWall]), 0);
+test('fadeStep eases towards see-through when blocked and back to solid when clear', () => {
+  let o = 1;
+  for (let i = 0; i < 60; i++) o = fadeStep(o, true, 1 / 60);
+  assert.ok(Math.abs(o - FADE_OPACITY) < 0.02, `faded to ${o}`);
+  assert.ok(FADE_OPACITY > 0 && FADE_OPACITY <= 0.3);
+  // A building the camera sits inside fades further, so its walls don't fog the view.
+  let deep = 1;
+  for (let i = 0; i < 60; i++) deep = fadeStep(deep, true, 1 / 60, FADE_INSIDE);
+  assert.ok(FADE_INSIDE < FADE_OPACITY && Math.abs(deep - FADE_INSIDE) < 0.02, `inside ${deep}`);
+  let last = o;
+  for (let i = 0; i < 120; i++) { o = fadeStep(o, false, 1 / 60); assert.ok(o >= last); last = o; }
+  assert.equal(o, 1, 'snaps to exactly solid so the original material can come back');
+  // Fading out is quicker than coming back.
+  const out = 1 - fadeStep(1, true, 0.1), back = fadeStep(FADE_OPACITY, false, 0.1) - FADE_OPACITY;
+  assert.ok(out > back, `${out} vs ${back}`);
 });
 
-test('a swing already under way holds its side when both sides are equally clear', () => {
-  const block = { type: 'box', x: 0, z: -5, hw: 1.5, hd: 1, rot: 0, kind: 'building' };
-  close(pickSwing(0, 0, BEHIND, REST.dist, [block], SWING), SWING);
-  close(pickSwing(0, 0, BEHIND, REST.dist, [block], -SWING), -SWING);
-});
-
-test('gems shrink to nothing as the camera closes within about 4 units', () => {
+test('gems shrink to nothing as the camera closes within about 5 units, full again by 9', () => {
   assert.equal(gemScale(2), 0);
-  assert.equal(gemScale(4), 0);
-  assert.equal(gemScale(7), 1);
+  assert.equal(gemScale(5), 0);
+  assert.equal(gemScale(9), 1);
   assert.equal(gemScale(40), 1);
-  const mid = gemScale(5);
+  const mid = gemScale(7);
   assert.ok(mid > 0 && mid < 1);
   let last = 0;
-  for (let d = 3; d <= 7; d += 0.25) { const s = gemScale(d); assert.ok(s >= last); last = s; }
+  for (let d = 4; d <= 10; d += 0.25) { const s = gemScale(d); assert.ok(s >= last); last = s; }
 });
 
 test('parked framing: k = 0 is the normal chase view', () => {

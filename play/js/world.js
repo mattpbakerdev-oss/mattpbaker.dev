@@ -135,7 +135,7 @@ export function buildWorld(scene) {
   buildPlaces(scene, colliders);
   const props = [];
   buildLampPosts(scene, colliders, blocked, props);
-  buildTrees(scene, colliders, rand, blocked, props);
+  const trees = buildTrees(scene, colliders, rand, blocked, props);
   buildBenches(scene, colliders, props);
   buildRim(scene, rand, vertexMat);
 
@@ -148,6 +148,8 @@ export function buildWorld(scene) {
     plotCorner: PLOT_CORNER,
     start: START,
     sun,
+    /** Per tree (collider `tree` index): its instanced parts, [{ mesh, index }], for fading. */
+    trees,
     groundHeightAt: (x, z) => groundHeight(x, z, RAMPS),
     /** Call once per frame with the point the shadows should centre on. */
     update(dt, focus, camera) { for (const fn of updaters) fn(dt, focus, camera); },
@@ -396,7 +398,7 @@ function buildLampPosts(scene, colliders, blocked, props) {
 }
 
 function buildTrees(scene, colliders, rand, blocked, props) {
-  const trunks = [], round = [], pines = [];
+  const trunks = [], round = [], pines = [], links = [];
   const greens = ['#4f9a4a', '#5aa652', '#6db35a', '#3f8a48', '#7fbf5e'].map((c) => new THREE.Color(c));
   const pineGreens = ['#2f7a4a', '#3b8a52', '#2a6e44'].map((c) => new THREE.Color(c));
   const near = (x, z, d) => props.some((p) => Math.hypot(p.x - x, p.z - z) < d);
@@ -408,21 +410,31 @@ function buildTrees(scene, colliders, rand, blocked, props) {
     if (inPark(x, z) && rand() < 0.6) continue; // the park stays mostly open lawn
     const s = 0.8 + rand() * 0.6;
     const pine = rand() < 0.35;
+    const canopy = pine ? pines : round;
+    links.push({ pine, index: canopy.length });
+    colliders.push({ type: 'circle', x, z, r: 0.45 * s + 0.15, kind: 'tree', tree: trunks.length });
     trunks.push({ x, z, s, rot: rand() * 6 });
-    (pine ? pines : round).push({ x, z, s, rot: rand() * 6, color: (pine ? pineGreens : greens)[Math.floor(rand() * (pine ? 3 : 5))] });
+    canopy.push({ x, z, s, rot: rand() * 6, color: (pine ? pineGreens : greens)[Math.floor(rand() * (pine ? 3 : 5))] });
     props.push({ x, z });
-    colliders.push({ type: 'circle', x, z, r: 0.45 * s + 0.15, kind: 'tree' });
   }
-  addTreeMeshes(scene, trunks, round, pines);
+  const meshes = addTreeMeshes(scene, trunks, round, pines);
+  return links.map(({ pine, index }, i) => [
+    { mesh: meshes.trunk, index: i },
+    { mesh: pine ? meshes.pine : meshes.round, index },
+  ]);
 }
 
 function addTreeMeshes(scene, trunks, round, pines) {
   const trunkGeo = new THREE.CylinderGeometry(0.22, 0.32, 1.8, 5).translate(0, 0.9, 0);
   const roundGeo = new THREE.IcosahedronGeometry(1.6, 0).scale(1, 1.1, 1).translate(0, 3.0, 0);
   const pineGeo = new THREE.ConeGeometry(1.5, 3.6, 6).translate(0, 3.3, 0);
-  scene.add(instanced(trunkGeo, material({ color: COLOURS.trunk }), trunks));
-  scene.add(instanced(roundGeo, material(), round));
-  scene.add(instanced(pineGeo, material(), pines));
+  const meshes = {
+    trunk: instanced(trunkGeo, material({ color: COLOURS.trunk }), trunks),
+    round: instanced(roundGeo, material(), round),
+    pine: instanced(pineGeo, material(), pines),
+  };
+  scene.add(meshes.trunk, meshes.round, meshes.pine);
+  return meshes;
 }
 
 // Benches: a few on the pavements facing the road, and some in the park facing the lawn. Each
@@ -492,7 +504,7 @@ function buildRim(scene, rand, mat) {
   hillMesh.receiveShadow = true;
   scene.add(hillMesh);
 
-  const trunks = [], round = [], pines = [];
+  const trunks = [], round = [], pines = [], links = [];
   const leaf = ['#4f9a4a', '#3f8a48', '#5aa652'].map((c) => new THREE.Color(c));
   rimTrees(rand, 120).forEach((t, i) => {
     trunks.push({ x: t.x, z: t.z, s: t.s });

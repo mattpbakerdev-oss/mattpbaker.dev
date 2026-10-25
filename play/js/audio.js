@@ -6,7 +6,7 @@
 // prop-hit { kind, strength }, walker-hit, collect, collect-all, panel-open/close,
 // map-open/close, menu-open.
 
-import { safeStorage } from './storage.js';
+import { safeStorage, readJSON, writeJSON } from './storage.js';
 
 export const SOUND_KEY = 'mattsville.sound';
 const DEFAULTS = { effects: true, music: false };
@@ -18,17 +18,13 @@ export function engineTone(speed) {
 }
 
 export function loadSoundSettings(storage) {
-  try {
-    const raw = JSON.parse(storage?.getItem(SOUND_KEY) ?? 'null');
-    if (!raw || typeof raw !== 'object') return { ...DEFAULTS };
-    return { effects: raw.effects !== false, music: raw.music === true };
-  } catch {
-    return { ...DEFAULTS };
-  }
+  const raw = readJSON(SOUND_KEY, storage);
+  if (!raw || typeof raw !== 'object') return { ...DEFAULTS };
+  return { effects: raw.effects !== false, music: raw.music === true };
 }
 
 export function saveSoundSettings(storage, settings) {
-  try { storage?.setItem(SOUND_KEY, JSON.stringify({ effects: Boolean(settings.effects), music: Boolean(settings.music) })); } catch { /* fine */ }
+  return writeJSON(SOUND_KEY, { effects: Boolean(settings.effects), music: Boolean(settings.music) }, storage);
 }
 
 const midi = (n) => 440 * 2 ** ((n - 69) / 12);

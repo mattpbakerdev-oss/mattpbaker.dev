@@ -4,6 +4,7 @@ import {
   circleVsCircle, circleVsBox, resolveCollisions, rampHeightAt, groundHeight,
   clampToPlot, nearestRoadPoint, circleOverlapsRect, rectsOverlap,
 } from '../js/physics.js';
+import { ROADS, RING } from '../js/layout.js';
 
 const close = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 
@@ -121,6 +122,25 @@ test('nearestRoadPoint snaps to a road centreline and returns a heading along it
   const b = nearestRoadPoint(68, 30, roads);
   close(b.x, 60); close(b.z, 30);
   close(Math.abs(Math.cos(b.heading)), 1); // pointing along z
+});
+
+test('nearestRoadPoint never lands on a road end cap: outer ring corners snap to the corner centre', () => {
+  // The real town: ring roads overhang their centreline loop by half a road width at each end.
+  for (const [x, z] of [[82, -82], [-80, 79], [77, 85], [-90, -72], [74.9, -70]]) {
+    const p = nearestRoadPoint(x, z, ROADS);
+    // On a centreline, within the centreline's own length.
+    const on = ROADS.some((r) => {
+      const alongX = r.w >= r.d;
+      const span = (alongX ? r.w : r.d) / 2 - Math.min(r.w, r.d) / 2;
+      return alongX ? Math.abs(p.z - r.z) < 1e-9 && Math.abs(p.x - r.x) <= span + 1e-9
+        : Math.abs(p.x - r.x) < 1e-9 && Math.abs(p.z - r.z) <= span + 1e-9;
+    });
+    assert.ok(on, `(${x}, ${z}) -> (${p.x}, ${p.z})`);
+    assert.ok(Math.abs(Math.abs(p.x) - RING) < 1e-9 && Math.abs(Math.abs(p.z) - RING) < 1e-9, `corner (${p.x}, ${p.z})`);
+    // ...and it faces along the ring, not off the end of the road into the grass.
+    const ax = p.x + Math.sin(p.heading) * 8, az = p.z + Math.cos(p.heading) * 8;
+    assert.ok(ROADS.some((r) => Math.abs(ax - r.x) < r.w / 2 && Math.abs(az - r.z) < r.d / 2), `faces off-road from (${x}, ${z})`);
+  }
 });
 
 test('circleOverlapsRect and rectsOverlap', () => {

@@ -1,6 +1,7 @@
 // Pure data and logic for the four hidden collectibles. No three.js, so node can test it.
-// Storage is passed in (localStorage in the browser) and every call is wrapped, so private
+// Storage is passed in (localStorage in the browser) and read through storage.js, so private
 // browsing or a full quota never breaks the game.
+import { readJSON, writeJSON } from './storage.js';
 
 export const FOUND_KEY = 'mattsville.found';
 const CAR_HEIGHT = 1.9;   // the car's body spans y .. y + CAR_HEIGHT
@@ -28,14 +29,10 @@ export function findPickups(pos, items, found) {
 }
 
 export function loadFound(storage) {
-  try {
-    const list = JSON.parse(storage?.getItem(FOUND_KEY) ?? '[]');
-    return new Set(Array.isArray(list) ? list.filter((id) => IDS.has(id)) : []);
-  } catch {
-    return new Set();
-  }
+  const list = readJSON(FOUND_KEY, storage);
+  return new Set(Array.isArray(list) ? list.filter((id) => IDS.has(id)) : []);
 }
 
 export function saveFound(storage, found) {
-  try { storage?.setItem(FOUND_KEY, JSON.stringify([...found])); } catch { /* private mode: fine */ }
+  return writeJSON(FOUND_KEY, [...found], storage);
 }

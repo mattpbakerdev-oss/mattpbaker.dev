@@ -26,7 +26,7 @@ const SIGNS = [
   { text: 'Speed limit: whatever ships it', x: 7.6, z: 34, rot: -Math.PI / 2, along: [0, 1] },
   { text: 'Caution: specs ahead', x: -39, z: 62.4, rot: 0, along: [1, 0] },
   { text: 'This road was built by an AI. I reviewed the plan', x: -38, z: 7.6, rot: Math.PI, along: [1, 0] },
-  { text: 'Bangkok: 9,500\u00a0km that way', x: 58, z: -7.6, rot: -Math.PI / 8, along: [1, 0], arrow: true },
+  { text: 'Bangkok: 9,500\u00a0km that\u00a0way', x: 58, z: -7.6, rot: -Math.PI / 8, along: [1, 0], arrow: true },
   { text: 'Every build keeps a log. This sign is in it', x: -7.6, z: -60, rot: Math.PI / 2, along: [0, 1] },
   { text: 'Park responsibly. Or don’t, it’s a game', x: 62.4, z: 51, rot: Math.PI / 2, along: [0, 1] },
 ];

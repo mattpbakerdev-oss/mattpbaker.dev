@@ -138,14 +138,19 @@ export function nearestRoadPoint(x, z, roads, prefer = 0) {
   let best = null;
   for (const road of roads) {
     const alongX = road.w >= road.d;
-    const half = (alongX ? road.w : road.d) / 2;
+    // The centreline stops half a road width short of each end, where it meets the crossing
+    // road's centreline; past that the rect is only a junction's outer kerb.
+    const half = (alongX ? road.w : road.d) / 2 - Math.min(road.w, road.d) / 2;
     const px = alongX ? Math.max(road.x - half, Math.min(road.x + half, x)) : road.x;
     const pz = alongX ? road.z : Math.max(road.z - half, Math.min(road.z + half, z));
     const dist = Math.hypot(x - px, z - pz);
     if (!best || dist < best.dist) {
-      const options = alongX ? [Math.PI / 2, -Math.PI / 2] : [0, Math.PI];
+      // At either end of the centreline, only the heading back along the road is offered.
+      const along = alongX ? px - road.x : pz - road.z;
+      const options = (alongX ? [Math.PI / 2, -Math.PI / 2] : [0, Math.PI])
+        .filter((h, i) => !(half > 0 && (i === 0 ? along >= half - 1e-9 : along <= -half + 1e-9)));
       const diff = (h) => Math.abs(wrapAngle(h - prefer));
-      const heading = diff(options[0]) <= diff(options[1]) ? options[0] : options[1];
+      const heading = options.length < 2 || diff(options[0]) <= diff(options[1]) ? options[0] : options[1];
       best = { x: px, z: pz, heading, dist };
     }
   }

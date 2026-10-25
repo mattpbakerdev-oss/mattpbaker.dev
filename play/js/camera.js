@@ -1,11 +1,15 @@
-// Smooth chase camera: behind and above the car, pulling back a little with speed. When a
-// building or tree sits between the car and the camera it keeps the lens out of it: first it
-// swings up to 25 degrees round the car to the clearer side (buildings only), then slides in,
-// never closer than MIN_DIST and only lifting a little, so the view stays on the road. Parked in
-// a place's ring, it eases back and up so the roof prop is in frame. Maths in camrig.js.
+// Smooth chase camera: behind and above the car, pulling back a little with speed. It stays at
+// that resting spot even near walls: whatever building or tree stands between it and the car is
+// faded (fader.js; `blocking` lists them each frame). Only when the resting spot would be inside
+// a building does it ease in towards the wall, never closer than MIN_DIST and lifting only a
+// little, so the car always reads from behind. Parked in a place's ring, it eases back and up so
+// the roof prop is in frame. Maths in camrig.js and occlusion.js.
 import * as THREE from 'three';
 import { wrapAngle } from './physics.js';
-import { chaseOffset, reach, pickSwing, parkedLook, parkTarget, TUCK_LIFT } from './camrig.js';
+import { chaseOffset, chaseLimit, parkedLook, parkTarget, TUCK_LIFT } from './camrig.js';
+import { blockers } from './occlusion.js';
+
+const CAR_HALF_WIDTH = 1.2; // rays go to the car's centre and this far either side of it
 
 export function createChaseCamera(camera, car, { reducedMotion = false, occluders = [] } = {}) {
   const pos = new THREE.Vector3();
@@ -17,8 +21,7 @@ export function createChaseCamera(camera, car, { reducedMotion = false, occluder
   let heading = car.heading;
   let clip = Infinity;     // smoothed distance limit from the car
   let pulled = 0;          // 0..1, how far the camera has been pulled in (lifts it a little)
-  let swing = 0;           // smoothed sideways swing round the car, radians
-  let swingTarget = 0;
+  const blocking = [];     // occluders between the camera and the car this frame
   let park = 0;            // 0..1, parked framing
   let focus = null;        // the place whose ring the car is in
 
@@ -26,9 +29,8 @@ export function createChaseCamera(camera, car, { reducedMotion = false, occluder
     const { dist, height } = chaseOffset(car.speed);
     const view = parkedLook(car, focus, park);
     const back = dist + view.extra;
-    const bearing = heading + Math.PI + swing;
+    const bearing = heading + Math.PI;
     desired.set(car.x + Math.sin(bearing) * back, car.y + height + view.extra * 0.35, car.z + Math.cos(bearing) * back);
-    // Look just ahead of the car (not round the swing), so a swing never twists the view.
     desiredLook.set(view.x, view.y, view.z);
   };
 
@@ -36,7 +38,6 @@ export function createChaseCamera(camera, car, { reducedMotion = false, occluder
     /** Jump straight to the resting spot, e.g. after a reset or fast travel. */
     snap() {
       heading = car.heading;
-      swing = swingTarget = 0;
       target();
       pos.copy(desired);
       look.copy(desiredLook);
@@ -57,10 +58,6 @@ export function createChaseCamera(camera, car, { reducedMotion = false, occluder
       heading += wrapAngle(car.heading - heading) * (1 - Math.exp(-4 * dt));
       park += (parkTarget(focus, car) - park) * (1 - Math.exp(-2.2 * dt));
       if (park < 0.001) park = 0;
-      // Building behind? Swing round to the clearer side before pulling in.
-      const { dist } = chaseOffset(car.speed);
-      swingTarget = pickSwing(car.x, car.z, heading + Math.PI, dist, occluders, swingTarget);
-      swing += (swingTarget - swing) * (1 - Math.exp(-3 * dt));
       target();
       pos.lerp(desired, 1 - Math.exp(-5 * dt));
       look.lerp(desiredLook, 1 - Math.exp(-6 * dt));
@@ -72,24 +69,26 @@ export function createChaseCamera(camera, car, { reducedMotion = false, occluder
       camera.position.copy(pos).add(shake);
       const ox = camera.position.x - car.x, oz = camera.position.z - car.z;
       const len = Math.hypot(ox, oz);
-      const { hard, soft } = len > 0.01 ? reach(car.x, car.z, Math.atan2(ox, oz), len, occluders) : { hard: Infinity, soft: Infinity };
-      // Ease in as geometry approaches, ease back out slowly once it's gone, never past `hard`.
-      const want = Math.min(soft, len + 4);
+      const limit = len > 0.01 ? chaseLimit(car.x, car.z, Math.atan2(ox, oz), len, occluders) : Infinity;
+      // Ease in when the resting spot is inside a building, ease back out slowly once it's clear.
+      const want = Math.min(limit, len + 4);
       if (!dt || !Number.isFinite(clip)) clip = want;
-      else clip += (want - clip) * (1 - Math.exp(-(want < clip ? 8 : 2.5) * dt));
-      const d = Math.min(len, clip, hard);
+      else clip += (want - clip) * (1 - Math.exp(-(want < clip ? 6 : 2.5) * dt));
+      const d = Math.min(len, clip);
       if (d < len) {
         camera.position.x = car.x + (ox / len) * d;
         camera.position.z = car.z + (oz / len) * d;
       }
       const tuck = len > 0 ? 1 - d / len : 0;
       pulled += (tuck - pulled) * (dt ? 1 - Math.exp(-5 * dt) : 1);
-      camera.position.y += Math.min(1, pulled * 1.6) * TUCK_LIFT; // a little higher when tucked in
+      camera.position.y += Math.min(1, pulled * 3) * TUCK_LIFT; // a little higher when pulled in
       camera.position.y = Math.max(camera.position.y, car.world.groundHeightAt(camera.position.x, camera.position.z) + 1);
+      blockers(camera.position.x, camera.position.z, car.x, car.z, occluders, CAR_HALF_WIDTH, blocking);
       camera.lookAt(look);
     },
-    /** For checks: the current swing (radians) and parked framing amount. */
-    get swing() { return swing; },
+    /** The buildings and trees hiding the car this frame (occluder shapes with a `key`). */
+    get blocking() { return blocking; },
+    /** For checks: the parked framing amount. */
     get park() { return park; },
   };
   return api;

@@ -1,20 +1,22 @@
-// Pure maths for the chase camera (camera.js does the three.js side). No three.js.
+// Pure maths for the chase camera (camera.js and fader.js do the three.js side). No three.js.
 //
 // Bearing: the direction from the car to the camera, as a heading (0 = +z), so the resting
 // camera sits at bearing = car heading + PI.
-import { firstHit } from './occlusion.js';
+import { firstHit, pointInside } from './occlusion.js';
 import { wrapAngle } from './physics.js';
 
 export const REST = { dist: 8.5, height: 3.6 }; // behind and above the car at a standstill
 export const LOOK_AHEAD = 4;    // the camera looks at a point this far in front of the car
 export const LOOK_HEIGHT = 2.4; // ...and this high, so roof props stay in frame
-export const MIN_DIST = 3.5;    // never closer to the car than this
-export const TUCK_LIFT = 0.8;   // how much higher the camera rides when pulled right in
-export const SWING = (25 * Math.PI) / 180; // sideways swing tried before pulling in at a building
+export const MIN_DIST = 7.5;    // pulling in never brings the camera closer than this
+export const TUCK_LIFT = 0.6;   // how much higher the camera rides when pulled right in
 export const PARK_EXTRA = 2;    // extra distance when parked in a ring, to fit the building in
-const LOOKAHEAD = 3;            // start easing in this far before the geometry
+export const FADE_OPACITY = 0.2; // how see-through a building or tree gets when it hides the car
+export const FADE_INSIDE = 0.05; // ...and a building the camera is inside
 const CLEAR = 0.6;              // gap kept between the lens and the geometry
 const PARK_SPEED = 3;           // below this the car counts as parked
+const FADE_OUT = 10;            // fade rates (per second): quick to clear the view...
+const FADE_BACK = 4;            // ...gentler coming back
 
 /** Where the eye goes when parked at each kind of building: about its middle, roof prop included. */
 export const FRAME_HEIGHT = { gym: 6.4, condo: 6.6, studio: 7, house: 3.4, 'post-office': 3.6, site: 3.2 };
@@ -30,36 +32,33 @@ export function pitchDegrees(dist, height, lookAhead = LOOK_AHEAD, lookHeight = 
   return (Math.atan2(height - lookHeight, dist + lookAhead) * 180) / Math.PI;
 }
 
-/** How far out along `bearing` the camera may sit: { hard, soft, kind of thing in the way }. */
-export function reach(x, z, bearing, len, occluders) {
-  const open = { hard: Infinity, soft: Infinity, kind: null };
-  if (!occluders.length || len < 0.01) return open;
-  const far = len + LOOKAHEAD;
-  const { t, shape } = firstHit(x, z, x + Math.sin(bearing) * far, z + Math.cos(bearing) * far, occluders);
-  if (!shape) return open;
-  const hit = t * far;
-  return { hard: Math.max(MIN_DIST, hit - CLEAR), soft: Math.max(MIN_DIST, hit - LOOKAHEAD), kind: shape.kind ?? null };
-}
-
 /**
- * When a building would pull the camera in, try swinging SWING either way round the car and
- * return the offset (0, SWING or -SWING) with the most room. `current` is the swing in use, kept
- * when it is as good as the other side so the camera doesn't flip-flop.
+ * How far from the car the camera may sit along `bearing` when its resting spot is `len` away.
+ * Things in between are faded rather than avoided, so this only bites when the resting spot
+ * itself is inside a building: then the camera eases in towards the wall, never closer than
+ * MIN_DIST, which is near the resting distance (the fade covers the rest). Infinity when there is no limit.
  */
-export function pickSwing(x, z, bearing, len, occluders, current = 0) {
-  const straight = reach(x, z, bearing, len, occluders);
-  if (straight.kind !== 'building' || straight.soft >= len) return 0;
-  const room = (offset) => Math.min(reach(x, z, bearing + offset, len, occluders).soft, len);
-  const base = room(0);
-  const sides = [SWING, -SWING].map((o) => ({ o, room: room(o) }));
-  if (current) sides.sort((a, b) => (a.o === current ? -1 : b.o === current ? 1 : 0));
-  let best = { o: 0, room: base + 0.5 }; // a swing must win by half a unit to be worth it
-  for (const s of sides) if (s.room > best.room) best = s;
-  return best.o;
+export function chaseLimit(x, z, bearing, len, occluders) {
+  if (len < 0.01) return Infinity;
+  const ex = x + Math.sin(bearing) * len, ez = z + Math.cos(bearing) * len;
+  let limit = Infinity;
+  for (const s of occluders) {
+    if (s.kind !== 'building' || !pointInside(ex, ez, s)) continue;
+    const { t } = firstHit(x, z, ex, ez, [s]); // 1 when the car itself is inside the padding
+    limit = Math.min(limit, Math.max(MIN_DIST, t * len - CLEAR));
+  }
+  return limit;
 }
 
-/** Marker gems vanish when the camera is within about 4 units, growing back by 6. */
-export function gemScale(dist, near = 4, far = 6) {
+/** One frame of a mesh's opacity easing towards `floor` (blocked) or 1 (clear). */
+export function fadeStep(opacity, blocked, dt, floor = FADE_OPACITY) {
+  const target = blocked ? floor : 1;
+  const next = opacity + (target - opacity) * (1 - Math.exp(-(blocked ? FADE_OUT : FADE_BACK) * dt));
+  return !blocked && next > 0.995 ? 1 : next;
+}
+
+/** Marker gems vanish when the camera is within about 5 units, growing back by 9. */
+export function gemScale(dist, near = 5, far = 9) {
   const t = Math.min(1, Math.max(0, (dist - near) / (far - near)));
   return t * t * (3 - 2 * t);
 }

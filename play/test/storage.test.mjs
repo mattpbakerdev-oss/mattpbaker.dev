@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { safeStorage, storeGet, storeSet } from '../js/storage.js';
+import { safeStorage, storeGet, storeSet, readJSON, writeJSON } from '../js/storage.js';
 import { loadSoundSettings, createAudio } from '../js/audio.js';
 import { loadFound } from '../js/collect.js';
 
@@ -67,4 +67,18 @@ test('createAudio boots when localStorage access throws (site data blocked)', ()
     globalThis.window = saved.window;
     globalThis.document = saved.document;
   }
+});
+
+test('readJSON and writeJSON: parsed values, null for junk, missing or broken storage', () => {
+  const s = memory();
+  assert.equal(writeJSON('j', { a: [1, 2] }, s), true);
+  assert.deepEqual(readJSON('j', s), { a: [1, 2] });
+  assert.equal(readJSON('missing', s), null);
+  s.setItem('bad', '{nope');
+  assert.equal(readJSON('bad', s), null);
+  assert.equal(readJSON('j', null), null);
+  assert.equal(writeJSON('j', 1, null), false);
+  assert.equal(readJSON('j', { getItem() { throw new Error('x'); } }), null);
+  assert.equal(writeJSON('j', 1, { setItem() { throw new Error('quota'); } }), false);
+  withStorage(blocked, () => { assert.equal(readJSON('j'), null); assert.equal(writeJSON('j', 1), false); });
 });

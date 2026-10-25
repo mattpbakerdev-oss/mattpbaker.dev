@@ -9,6 +9,7 @@ import { Car } from './car.js';
 import { createInput } from './input.js';
 import { createChaseCamera } from './camera.js';
 import { cameraOccluders } from './occlusion.js';
+import { createFader } from './fader.js';
 import { createExtras } from './extras.js';
 import { createAudio } from './audio.js';
 import { WebGLFailure, isWebGLFailure } from './bootfail.js';
@@ -102,6 +103,7 @@ async function boot() {
   scene.add(car.object);
   const chase = createChaseCamera(camera, car, { reducedMotion, occluders: cameraOccluders(world.colliders) });
   chase.snap();
+  const fader = createFader(scene, world);
   const input = createInput(window);
   input.setEnabled(false);
 
@@ -141,6 +143,7 @@ async function boot() {
     for (let i = 0; i < steps; i++) car.update(dt / steps, input.state);
     chase.setFocus(ui.active);
     chase.update(dt);
+    fader.update(dt, chase.blocking, camera.position);
     ui.update(dt);
     markers.update(dt, ui.active?.id ?? null, ui.visited, camera);
     extras.update(dt, ui.isOpen);
@@ -151,7 +154,7 @@ async function boot() {
   }
   requestAnimationFrame((t) => { last = t; frame(t); });
 
-  window.__game = { renderer, scene, camera, car, world, input, chase, events, ui, markers, extras, audio };
+  window.__game = { renderer, scene, camera, car, world, input, chase, fader, events, ui, markers, extras, audio };
 
   status.textContent = 'Mattsville is ready';
   loader.classList.add('is-ready');

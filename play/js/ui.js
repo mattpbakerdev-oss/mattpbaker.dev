@@ -194,13 +194,15 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
 
   /** The email address as text you can read and copy, with a Copy button. */
   function emailEl(address) {
-    const label = h('span', {}, 'Copy');
+    const label = h('span', { class: 'email-copy-label' }, 'Copy');
     const btn = h('button', { type: 'button', class: 'email-copy', 'aria-label': `Copy ${address}` },
       h('span', { class: 'email-icon', 'aria-hidden': 'true', html: ICON.copy }), label);
-    const text = h('span', { class: 'email-text' }, address);
+    // A break chance only after the @, so a narrow panel never splits a word of the address.
+    const at = address.indexOf('@') + 1;
+    const text = h('span', { class: 'email-text' }, address.slice(0, at), at ? h('wbr') : null, address.slice(at));
     let reset = null;
     btn.addEventListener('click', async () => {
-      const ok = await copyText(address);
+      const ok = await copyText(address, btn);
       if (ok) {
         toast('Email address copied.', { title: 'Copied', duration: 2400 });
         label.textContent = 'Copied';
@@ -219,20 +221,22 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     return h('div', { class: 'email' }, h('p', { class: 'email-label' }, 'Email'), h('div', { class: 'email-row' }, text, btn));
   }
 
-  async function copyText(text) {
+  /** Copy to the clipboard; the old textarea fallback steals focus, so it goes back to `owner`. */
+  async function copyText(text, owner) {
     try {
       if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true; }
     } catch { /* blocked: try the old way */ }
+    const area = h('textarea', { class: 'sr-only', readonly: true, 'aria-hidden': 'true' });
     try {
-      const area = h('textarea', { class: 'sr-only', readonly: true, 'aria-hidden': 'true' });
       area.value = text;
       panel.append(area);
       area.select();
-      const ok = document.execCommand('copy');
-      area.remove();
-      return ok;
+      return document.execCommand('copy');
     } catch {
       return false;
+    } finally {
+      area.remove();
+      owner?.focus({ preventScroll: true });
     }
   }
 

@@ -36,5 +36,5 @@ export const PARK = { x: 35, z: 46, w: 50, d: 30 };
 
 // The car starts on the east side of the square facing north-east: the welcome sign stands at
 // the square's corner, turned to greet it, with the Up Lock gym and its phone beyond.
-export const START = { x: 8, z: 9, heading: 2.18 };
+export const START = { x: 11, z: 6, heading: 2.42 };
 export const WELCOME_SIGN = { x: 20, z: -11, rotation: -0.54 };

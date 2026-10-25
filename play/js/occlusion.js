@@ -1,4 +1,5 @@
-// Pure 2D (x, z) checks that keep the chase camera out of buildings and trees. No three.js.
+// Pure 2D (x, z) checks for the chase camera: what stands between it and the car (so it can be
+// faded) and how far it may sit from the car. No three.js.
 
 /** Fraction 0..1 along a -> b where the segment first enters any shape (1 if it never does). */
 export function segmentHit(ax, az, bx, bz, shapes) {
@@ -47,18 +48,56 @@ function boxHit(ax, az, dx, dz, box) {
   return t0;
 }
 
+function inside(x, z, s) {
+  if (s.type === 'circle') return (x - s.x) ** 2 + (z - s.z) ** 2 < s.r * s.r;
+  const cos = Math.cos(s.rot || 0), sin = Math.sin(s.rot || 0);
+  const wx = x - s.x, wz = z - s.z;
+  return Math.abs(wx * cos - wz * sin) < s.hw && Math.abs(wx * sin + wz * cos) < s.hd;
+}
+
+/** True when the point (x, z) is inside the shape. */
+export const pointInside = inside;
+
+/** Does a -> b start in the shape, or enter it before fraction `maxT` (or end in it, if `ends`)? */
+function touches(ax, az, bx, bz, s, maxT = 1, ends = true) {
+  if (inside(ax, az, s) || (ends && inside(bx, bz, s))) return true;
+  const dx = bx - ax, dz = bz - az;
+  const t = s.type === 'circle' ? circleHit(ax, az, dx, dz, s) : boxHit(ax, az, dx, dz, s);
+  return t !== null && t < maxT;
+}
+
+/**
+ * Fills `out` with the shapes that hide the car from a camera at (cx, cz): any shape crossed by
+ * the line to the car's centre or that the camera is in, plus anything crossing the lines to
+ * points `half` either side of the car well before it gets there (so a wall the car is merely
+ * driving beside doesn't fade).
+ * Returns `out` (cleared first) so the caller can reuse one array every frame.
+ */
+export function blockers(cx, cz, carX, carZ, shapes, half, out = []) {
+  out.length = 0;
+  const dx = carX - cx, dz = carZ - cz;
+  const len = Math.hypot(dx, dz) || 1;
+  const px = (-dz / len) * half, pz = (dx / len) * half; // sideways, across the view
+  for (const s of shapes) {
+    if (touches(cx, cz, carX, carZ, s) ||
+      touches(cx, cz, carX + px, carZ + pz, s, 0.85, false) || touches(cx, cz, carX - px, carZ - pz, s, 0.85, false)) out.push(s);
+  }
+  return out;
+}
+
 /**
  * The colliders tall enough to hide the car: buildings (not the low building-site fences) and
  * trees, whose canopy is far wider than the trunk collider. Padded so the lens stays clear.
+ * `key` names the mesh to fade: `b:<place id>` or `t:<tree index>`.
  */
 export function cameraOccluders(colliders, pad = 0.5) {
   const out = [];
   for (const c of colliders) {
     if (c.kind === 'building' && !String(c.id ?? '').startsWith('site')) {
-      out.push({ type: 'box', x: c.x, z: c.z, hw: c.hw + pad, hd: c.hd + pad, rot: c.rot, kind: 'building' });
+      out.push({ type: 'box', x: c.x, z: c.z, hw: c.hw + pad, hd: c.hd + pad, rot: c.rot, kind: 'building', key: `b:${c.id}` });
     } else if (c.kind === 'tree') {
       const scale = (c.r - 0.15) / 0.45; // world.js: r = 0.45 * scale + 0.15
-      out.push({ type: 'circle', x: c.x, z: c.z, r: 1.6 * scale + pad * 0.4, kind: 'tree' });
+      out.push({ type: 'circle', x: c.x, z: c.z, r: 1.6 * scale + pad * 0.4, kind: 'tree', key: `t:${c.tree}` });
     }
   }
   return out;
