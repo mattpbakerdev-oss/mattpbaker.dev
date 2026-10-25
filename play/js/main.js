@@ -1,6 +1,10 @@
 // Boot: loading screen, renderer, world, car, camera and the render loop.
 import * as THREE from 'three';
 import { buildWorld } from './world.js';
+import './models.js'; // registers the building builders before the world is built
+import { PLACES } from './places.js';
+import { createMarkers } from './markers.js';
+import { createUI } from './ui.js';
 import { Car } from './car.js';
 import { createInput } from './input.js';
 import { createChaseCamera } from './camera.js';
@@ -26,14 +30,37 @@ function progress(fraction) {
   bar.parentElement.setAttribute('aria-valuenow', String(pct));
 }
 
+/** The friendly card for browsers that can't draw the town, with a way into every project. */
 function showFallback() {
   loader.classList.add('is-fallback');
-  status.textContent = 'Your browser can’t draw the 3D town, but the normal site has everything in it.';
-  bar.parentElement.hidden = true;
-  $('fallback-link').hidden = false;
+  status.parentElement.hidden = true;
+  const list = $('fallback-links');
+  list.replaceChildren(...PLACES.filter((p) => p.kind === 'project').map((p) => {
+    const link = p.links.find((l) => l.href.startsWith('/work/'));
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = link?.href ?? '/';
+    a.textContent = p.title;
+    li.append(a);
+    return li;
+  }));
+  $('fallback').hidden = false;
+  $('fallback').querySelector('a')?.focus({ preventScroll: true });
+}
+
+function webglAvailable() {
+  // ?webgl=0 shows the fallback card on purpose, for checking it.
+  if (new URLSearchParams(location.search).get('webgl') === '0') return false;
+  try {
+    const c = document.createElement('canvas');
+    return Boolean(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl')));
+  } catch {
+    return false;
+  }
 }
 
 async function boot() {
+  if (!webglAvailable()) { showFallback(); return; }
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -56,6 +83,7 @@ async function boot() {
   const aspect = window.innerWidth / window.innerHeight;
   const camera = new THREE.PerspectiveCamera(fovFor(aspect), aspect, 0.5, 1200);
   const world = buildWorld(scene);
+  const markers = createMarkers(scene, PLACES, { reducedMotion });
   progress(0.65);
   await nextFrame();
 
@@ -71,6 +99,8 @@ async function boot() {
   const emit = (type, detail) => events.dispatchEvent(new CustomEvent(type, { detail }));
   car.onBump = (strength, nx, nz) => { chase.nudge(strength, nx, nz); emit('bump', { strength }); };
   car.onLand = (impact) => emit('land', { impact });
+  const ui = createUI({ car, chase, world, input, events, canvas, reducedMotion });
+  markers.update(0, null, ui.visited);
 
   world.update(0, car.position, camera);
   await renderer.compileAsync(scene, camera).catch(() => {});
@@ -97,13 +127,15 @@ async function boot() {
     const steps = Math.ceil(dt / STEP);
     for (let i = 0; i < steps; i++) car.update(dt / steps, input.state);
     chase.update(dt);
+    ui.update(dt);
+    markers.update(dt, ui.active?.id ?? null, ui.visited);
     world.update(dt, car.position, camera);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame((t) => { last = t; frame(t); });
 
-  window.__game = { renderer, scene, camera, car, world, input, chase, events };
+  window.__game = { renderer, scene, camera, car, world, input, chase, events, ui, markers };
 
   status.textContent = 'Mattsville is ready';
   loader.classList.add('is-ready');
@@ -116,6 +148,7 @@ async function boot() {
     setTimeout(done, 800); // in case transitionend never fires
     input.setEnabled(true);
     canvas.focus({ preventScroll: true });
+    ui.start();
     emit('start');
   }, { once: true });
 }

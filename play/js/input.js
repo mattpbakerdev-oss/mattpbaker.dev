@@ -1,5 +1,5 @@
-// Input as one plain state object. Keyboard feeds it now; touch controls can write the same
-// fields later. Steer: -1 left, +1 right. Throttle: +1 forward, -1 back.
+// Input as one plain state object, fed by the keyboard and the touch controls.
+// Steer: -1 left, +1 right. Throttle: +1 forward, -1 back.
 
 const KEYS = {
   forward: ['KeyW', 'ArrowUp'],
@@ -29,6 +29,15 @@ export function applyKeys(state, held) {
   return state;
 }
 
+/** Add the touch controls on top of the keyboard. Keys win on an axis they are holding. */
+export function mergeTouch(state, touch) {
+  if (!state.throttle) state.throttle = Math.max(-1, Math.min(1, touch.throttle || 0));
+  if (!state.steer) state.steer = Math.max(-1, Math.min(1, touch.steer || 0));
+  state.interact = state.interact || Boolean(touch.interact);
+  state.horn = state.horn || Boolean(touch.horn);
+  return state;
+}
+
 /** Which one-shot buttons went down since the last frame. */
 export function risingEdges(prev, cur) {
   const out = {};
@@ -37,12 +46,15 @@ export function risingEdges(prev, cur) {
 }
 
 /**
- * Attach keyboard listeners. Returns { state, update(), setEnabled(bool), dispose() }.
+ * Attach keyboard listeners. Returns { state, touch, update(), setEnabled(bool), dispose() }.
+ * Touch controls write into `touch`; update() merges it with the keys.
  * update() returns this frame's rising edges; call it once per frame.
  */
 export function createInput(target = window) {
   const state = createState();
+  const touch = { throttle: 0, steer: 0, interact: false, horn: false }; // written by touch.js
   const held = new Set();
+  const tapped = new Set(); // pressed since the last update, so a tap shorter than a frame still counts
   let prev = createState();
   let enabled = true;
 
@@ -53,10 +65,11 @@ export function createInput(target = window) {
     // Enter and Space on a focused button belong to the button.
     if ((e.code === 'Enter' || e.code === 'Space') && e.target instanceof HTMLElement && e.target.closest('button, a')) return;
     held.add(e.code);
+    tapped.add(e.code);
     e.preventDefault();
   };
   const onUp = (e) => held.delete(e.code);
-  const clear = () => held.clear();
+  const clear = () => { held.clear(); tapped.clear(); };
 
   target.addEventListener('keydown', onDown);
   target.addEventListener('keyup', onUp);
@@ -65,8 +78,10 @@ export function createInput(target = window) {
 
   return {
     state,
+    touch,
     update() {
-      if (enabled) applyKeys(state, held);
+      if (enabled) mergeTouch(applyKeys(state, tapped.size ? new Set([...held, ...tapped]) : held), touch);
+      tapped.clear();
       const edges = risingEdges(prev, state);
       prev = { ...state };
       return edges;
@@ -74,7 +89,9 @@ export function createInput(target = window) {
     setEnabled(on) {
       enabled = on;
       held.clear();
+      tapped.clear();
       Object.assign(state, createState());
+      Object.assign(touch, { throttle: 0, steer: 0, interact: false, horn: false });
     },
     dispose() {
       target.removeEventListener('keydown', onDown);

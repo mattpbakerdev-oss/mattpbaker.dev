@@ -38,11 +38,110 @@
         Start driving
         <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
       </button>
-      <a class="pill pill-amber" id="fallback-link" href="/" hidden>Go to mattpbaker.dev</a>
+    </div>
+    <div class="fallback" id="fallback" hidden>
+      <h2 class="fallback-title">This browser can’t draw the town</h2>
+      <p class="fallback-text">Mattsville needs WebGL, which is switched off or missing here. Everything in the town is on the normal site.</p>
+      <a class="pill pill-amber" href="/">
+        Go to mattpbaker.dev
+        <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
+      <p class="fallback-or" id="fallback-or-label">Or go straight to</p>
+      <ul class="fallback-links" id="fallback-links" aria-labelledby="fallback-or-label"></ul>
     </div>
   </main>
   <a class="loader-exit" href="/">Prefer the normal site? <span>mattpbaker.dev</span></a>
 </div>
+
+<header class="hud" id="hud" hidden>
+  <nav class="hud-bar" aria-label="Game">
+    <a class="hud-mark" href="/" aria-label="Back to mattpbaker.dev">Matt Baker</a>
+    <p class="hud-count" id="hud-count">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"/></svg>
+      <span id="hud-found">Found 0 of 4</span>
+    </p>
+    <button type="button" class="hud-btn" id="hud-map" aria-haspopup="dialog">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v10l-4 1.5-5-2-4 1.5z"/><path d="M5.5 2v10M10.5 4v10"/></svg>
+      <span>Map</span><kbd class="hud-key" aria-hidden="true">M</kbd>
+    </button>
+    <button type="button" class="hud-btn hud-icon" id="hud-sound" aria-pressed="false" aria-label="Sound">
+      <svg class="icon-off" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M11 6l3.5 4M14.5 6L11 10"/></svg>
+      <svg class="icon-on" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.8 5.6a3.4 3.4 0 010 4.8M12.8 3.8a6 6 0 010 8.4"/></svg>
+    </button>
+  </nav>
+</header>
+
+<canvas class="minimap" id="minimap" aria-hidden="true" hidden></canvas>
+
+<button type="button" class="prompt" id="prompt" hidden>
+  <span class="prompt-place" id="prompt-place"></span>
+  <span class="prompt-act" id="prompt-act"></span>
+</button>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<p class="sr-only" id="announcer" aria-live="polite"></p>
+
+<div class="touch" id="touch" hidden>
+  <div class="stick" data-stick aria-hidden="true"><span class="stick-knob" data-knob></span></div>
+  <div class="touch-buttons">
+    <button type="button" class="tbtn tbtn-horn" data-hold="horn" aria-label="Horn">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M3.8 10.5l5.8 1M14.4 11.5l5.8-1M12 14.5v6"/></svg>
+    </button>
+    <button type="button" class="tbtn tbtn-go" id="touch-interact" data-hold="interact" aria-label="Look inside" aria-disabled="true">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9l8-5 8 5v11"/><path d="M10 20v-6h4v6"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<section class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" tabindex="-1" hidden>
+  <div class="panel-grab" data-grab aria-hidden="true"><span></span></div>
+  <button type="button" class="close" data-close aria-label="Close and keep driving">
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+  </button>
+  <div class="panel-scroll" id="panel-body"></div>
+</section>
+
+<section class="mapdlg" id="map" role="dialog" aria-modal="true" aria-labelledby="map-title" tabindex="-1" hidden>
+  <div class="mapdlg-head">
+    <h2 id="map-title">Map of Mattsville</h2>
+    <button type="button" class="close" data-close aria-label="Close the map">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
+  </div>
+  <div class="mapdlg-body">
+    <canvas class="mapdlg-canvas" id="map-canvas" aria-hidden="true"></canvas>
+    <div class="mapdlg-side">
+      <p class="mapdlg-hint" id="map-hint">Pick a place and you’ll be parked outside it, facing the door.</p>
+      <ul class="mapdlg-list" id="map-list" aria-describedby="map-hint"></ul>
+    </div>
+  </div>
+</section>
+
+<section class="howto" id="howto" role="dialog" aria-modal="true" aria-labelledby="howto-title" aria-describedby="howto-lead" tabindex="-1" hidden>
+  <h2 id="howto-title">How to play</h2>
+  <p class="howto-lead" id="howto-lead">Drive into the amber ring outside a building, then look inside.</p>
+  <dl class="howto-keys" data-for="keys">
+    <div><dt>Drive</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span class="or">or arrows</span></dd></div>
+    <div><dt>Brake</dt><dd><kbd class="wide">Space</kbd></dd></div>
+    <div><dt>Look inside</dt><dd><kbd>E</kbd></dd></div>
+    <div><dt>Map and fast travel</dt><dd><kbd>M</kbd></dd></div>
+    <div><dt>Horn</dt><dd><kbd>H</kbd></dd></div>
+    <div><dt>Back on the road</dt><dd><kbd>R</kbd></dd></div>
+  </dl>
+  <dl class="howto-keys" data-for="touch">
+    <div><dt>Drive</dt><dd>Drag the stick, bottom left</dd></div>
+    <div><dt>Look inside</dt><dd>The amber button lights up near a building</dd></div>
+    <div><dt>Horn</dt><dd>The button above it</dd></div>
+    <div><dt>Map and fast travel</dt><dd>Map, in the top bar</dd></div>
+  </dl>
+  <button type="button" class="pill pill-amber howto-go" data-close>
+    Let’s drive
+    <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+  </button>
+  <p class="howto-any" data-for="keys">Or press any key</p>
+</section>
 
 <noscript>
   <div class="loader is-fallback">

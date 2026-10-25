@@ -3,3 +3,5 @@
 import './physics.test.mjs';
 import './places.test.mjs';
 import './input.test.mjs';
+import './proximity.test.mjs';
+import './joystick.test.mjs';

@@ -29,3 +29,14 @@ test('risingEdges reports only buttons that went from up to down', () => {
   const cur = { interact: true, horn: true, map: false, reset: true };
   assert.deepEqual(risingEdges(prev, cur), { interact: true, horn: false, map: false, reset: true });
 });
+
+test('mergeTouch adds the touch controls to the keyboard state', async () => {
+  const { mergeTouch } = await import('../js/input.js');
+  const s = createState();
+  mergeTouch(s, { throttle: 0.6, steer: -0.4, interact: true, horn: false });
+  assert.equal(s.throttle, 0.6); assert.equal(s.steer, -0.4); assert.equal(s.interact, true);
+  // Keys win when both are held, and the sum never leaves -1..1.
+  applyKeys(s, new Set(['KeyW']));
+  mergeTouch(s, { throttle: 0.6, steer: 0, interact: false, horn: true });
+  assert.equal(s.throttle, 1); assert.equal(s.horn, true);
+});
