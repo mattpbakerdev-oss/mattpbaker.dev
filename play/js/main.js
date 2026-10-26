@@ -191,7 +191,8 @@ async function boot() {
   startBtn.hidden = false;
   startBtn.focus({ preventScroll: true });
 
-  const IGNORE = new Set(['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'ContextMenu']);
+  // Escape is not a start key: browsers don't count it as a gesture that may start audio.
+  const IGNORE = new Set(['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'ContextMenu', 'Escape']);
   function start(e) {
     if (started) return;
     started = true;

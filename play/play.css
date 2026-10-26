@@ -94,7 +94,8 @@ kbd.wide { min-width: 62px; }
 .loader {
   position: fixed; inset: 0; z-index: 50;
   display: grid; grid-template-rows: 1fr auto; justify-items: center;
-  padding: max(24px, var(--safe-t)) 24px max(24px, var(--safe-b));
+  padding: max(24px, var(--safe-t)) max(16px, var(--safe-r)) max(24px, var(--safe-b)) max(16px, var(--safe-l));
+  overflow-y: auto; overscroll-behavior: contain; /* short screens: scroll rather than clip */
   transition: opacity .5s var(--ease-out), visibility 0s linear .5s;
   cursor: default;
 }
@@ -106,8 +107,9 @@ kbd.wide { min-width: 62px; }
 }
 .loader::after {
   content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0;
-  background: radial-gradient(70% 55% at 50% 45%, rgba(255,244,220,0.5), transparent 75%),
-              linear-gradient(rgba(30,20,36,0.18), transparent 30%, transparent 70%, rgba(30,20,36,0.3));
+  /* A light lift behind the logo only; the top of the frame stays sky blue. */
+  background: radial-gradient(70% 55% at 50% 45%, rgba(255,244,220,0.45), transparent 75%),
+              linear-gradient(transparent 70%, rgba(30,20,36,0.25));
   transition: opacity .9s var(--ease-out);
 }
 .loader.is-drawing:not(.is-fallback)::before { opacity: 0; }
@@ -119,7 +121,8 @@ kbd.wide { min-width: 62px; }
 .logo { margin: 0; line-height: 1; }
 .logo-word {
   display: inline-block; transform: rotate(-3deg);
-  font: 400 clamp(3.4rem, 15vw, 7.25rem)/0.95 var(--display); letter-spacing: 0.01em; text-transform: uppercase;
+  /* Width and height both count, so the word fits a 320 px phone and a landscape phone. */
+  font: 400 clamp(2.4rem, min(13vw, 18vh), 7.25rem)/0.95 var(--display); letter-spacing: 0.01em; text-transform: uppercase;
   color: var(--yellow);
   -webkit-text-stroke: 0.14em var(--ink); paint-order: stroke fill;
   filter: drop-shadow(0.06em 0.06em 0 var(--ink));
@@ -130,7 +133,7 @@ kbd.wide { min-width: 62px; }
   font: 500 16px/1.3 var(--sans);
 }
 
-.loader-progress { margin-top: 44px; display: grid; justify-items: center; gap: 14px; min-height: 104px; }
+.loader-progress { margin-top: 44px; display: grid; justify-items: center; align-content: start; gap: 14px; min-height: 104px; }
 .fuel { display: flex; align-items: center; gap: 10px; }
 .fuel-end { font: 400 18px/1 var(--display); color: var(--ink); width: 14px; }
 .fuel-track {
@@ -153,9 +156,10 @@ kbd.wide { min-width: 62px; }
 
 .loader-exit {
   --sh-current: var(--sh-press);
-  display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; margin-top: 12px;
-  border: var(--line); border-radius: 999px; background: var(--cream); box-shadow: var(--sh-press);
-  font: 400 15px/1.2 var(--sans); color: var(--ink-2); cursor: pointer;
+  display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 6px;
+  max-width: 100%; padding: 9px 16px; margin-top: 12px; text-align: center;
+  border: var(--line); border-radius: 22px; background: var(--cream); box-shadow: var(--sh-press);
+  font: 400 15px/1.3 var(--sans); color: var(--ink-2); cursor: pointer;
   transition: transform .12s var(--ease-out), box-shadow .12s var(--ease-out);
 }
 .loader-exit span { color: var(--ink); font-weight: 600; }
@@ -175,6 +179,15 @@ kbd.wide { min-width: 62px; }
   border: 2.5px solid var(--ink); background: var(--cream-2); font: 500 14px/1 var(--sans);
 }
 .loader.is-fallback .logo-tag, .loader.is-fallback .loader-exit { display: none; }
+/* Landscape phones and short windows: tighter spacing so the start button and the way out fit. */
+@media (max-height: 500px) {
+  .loader { padding-top: max(14px, var(--safe-t)); padding-bottom: max(14px, var(--safe-b)); }
+  .logo-tag { margin-top: 12px; padding: 5px 14px; font-size: 15px; }
+  .loader-progress { margin-top: 18px; min-height: 64px; }
+  .btn-big { min-height: 52px; font-size: 20px; }
+  .fallback { margin-top: 16px; padding: 18px 20px; gap: 10px; }
+  .loader-exit { margin-top: 8px; }
+}
 
 /* ---------- HUD ---------- */
 .hud {
@@ -193,14 +206,10 @@ kbd.wide { min-width: 62px; }
   font: 400 20px/1 var(--display); letter-spacing: 0.02em; white-space: nowrap;
 }
 .badge-logo { background: var(--yellow); text-transform: uppercase; transform: rotate(-3deg); }
-.badge-star { background: var(--cream); transform: rotate(2deg); font-variant-numeric: tabular-nums; }
-.badge-star svg { width: 22px; height: 22px; fill: var(--yellow); stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; }
-.badge-star.is-bumped { animation: bump .42s var(--spring); }
-@keyframes bump { 40% { transform: rotate(2deg) scale(1.18); } }
 
 /* To-do card */
 .todo {
-  width: 274px; border: var(--line); border-radius: var(--radius); background: var(--cream); box-shadow: var(--sh);
+  width: 296px; border: var(--line); border-radius: var(--radius); background: var(--cream); box-shadow: var(--sh);
   overflow: hidden;
 }
 .todo-head {
@@ -208,7 +217,9 @@ kbd.wide { min-width: 62px; }
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: 42px; padding: 6px 10px 6px 14px;
   border: 0; background: var(--yellow); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.todo-head:focus-visible { outline-offset: -6px; box-shadow: none; border-radius: 14px; }
+/* Switch-row style: an ink ring just inside the edge with a soft inset band (the head is yellow). */
+.todo-head:focus-visible { outline-offset: -7px; box-shadow: inset 0 0 0 4px var(--cream); border-radius: 13px 13px 0 0; }
+.todo-head[aria-expanded="false"]:focus-visible { border-radius: 13px; }
 .todo-title { font: 400 19px/1 var(--display); letter-spacing: 0.04em; text-transform: uppercase; }
 .todo-count {
   margin-left: auto; padding: 3px 8px; border: 2.5px solid var(--ink); border-radius: 999px; background: var(--cream);
@@ -232,6 +243,18 @@ kbd.wide { min-width: 62px; }
 .todo-item.is-new .todo-box { animation: tickpop .34s var(--spring); }
 .todo-item.is-new .todo-box svg { transition: opacity .1s, transform .34s var(--spring); }
 @keyframes tickpop { from { transform: scale(0.6); } }
+/* The hidden extras: optional, so set apart under a dashed rule, quieter, with their own count. */
+.todo-extra { margin-top: 4px; padding-top: 8px; border-top: 2.5px dashed rgba(30,20,36,0.3); color: var(--ink-2); }
+.todo-extra .todo-box { border-style: dashed; background: transparent; }
+.todo-extra .todo-box svg { opacity: 1; transform: none; fill: var(--yellow); stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; width: 16px; height: 16px; }
+.todo-extra.is-done .todo-box { border-style: solid; background: var(--green); }
+.todo-extra.is-done .todo-box svg { fill: none; }
+.todo-extra.is-done .todo-label { text-decoration: none; }
+.todo-extra-count {
+  margin-left: auto; padding: 2px 7px; border: 2px dashed rgba(30,20,36,0.45); border-radius: 999px;
+  font: 400 13px/1 var(--display); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.todo-extra.is-done .todo-extra-count { border-style: solid; border-color: var(--ink); background: var(--green); color: var(--ink); }
 
 .hud-right {
   position: absolute; top: max(16px, var(--safe-t)); right: max(16px, var(--safe-r));
@@ -325,7 +348,10 @@ kbd.wide { min-width: 62px; }
 .speedo-ticks line { stroke: var(--ink); stroke-linecap: round; }
 .speedo-ticks text { font: 400 11px var(--display); fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
 .speedo-ticks .redline { stroke: var(--red); }
-.speedo-needle { transform-origin: 60px 60px; }
+.speedo-needle {
+  position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
+  transform: rotate(-120deg); will-change: transform;
+}
 .speedo-needle path { fill: var(--orange); stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; }
 .speedo-hub { fill: var(--ink); }
 .speedo-read {
@@ -335,47 +361,49 @@ kbd.wide { min-width: 62px; }
 }
 .speedo-num { font: 400 24px/1 var(--display); font-variant-numeric: tabular-nums; }
 .speedo-unit { font: 400 12px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; }
-/* Touch: a compact badge top centre, clear of the stick and buttons */
+/* Touch: a compact badge under the round buttons, top right, clear of the stick, the buttons
+   and the banner slot in the middle. */
 .is-touch .speedo {
-  top: calc(max(12px, var(--safe-t)) + 56px); bottom: auto; right: auto; left: 50%; transform: translateX(-50%) rotate(-2deg);
+  top: calc(max(16px, var(--safe-t)) + 66px); bottom: auto; right: max(16px, var(--safe-r)); left: auto; transform: rotate(-2deg);
   width: auto; height: auto;
 }
-.is-touch .speedo-dial { display: none; }
+.is-touch .speedo-dial, .is-touch .speedo-needle { display: none; }
 .is-touch .speedo-read { position: static; transform: none; padding: 5px 11px 6px; border-width: 3px; border-radius: 12px; box-shadow: var(--sh-press); }
 .is-touch .speedo-num { font-size: 21px; }
-.is-paused .speedo, .is-paused .minimap, .is-paused .tags, .is-paused .hud-right { visibility: hidden; }
+.is-paused .speedo, .is-paused .minimap, .is-paused .tags, .is-paused .hud-right, .is-paused .hud-left { visibility: hidden; }
 
 /* ---------- Arrival banner ---------- */
+/* Desktop: in the sky band, top centre between the two HUD clusters, clear of the roof props. */
 .banner {
-  position: fixed; z-index: 14; left: 0; right: 0; top: 27vh; pointer-events: none;
-  display: grid; justify-items: center; gap: 8px; padding: 0 16px;
+  position: fixed; z-index: 14; left: 50%; top: calc(var(--safe-t) + 14px); translate: -50% 0;
+  width: min(500px, calc(100vw - 640px)); min-width: min(400px, calc(100vw - 32px)); pointer-events: none;
+  display: grid; justify-items: center; gap: 8px;
 }
 .banner-name, .banner-line { margin: 0; opacity: 0; transform: translateX(-110vw); }
 .banner-name {
-  max-width: 100%; padding: 10px 30px 12px; border: var(--line); border-radius: 18px; background: var(--yellow);
-  box-shadow: 6px 6px 0 var(--ink); rotate: -3deg;
-  font: 400 clamp(34px, 6vw, 58px)/1 var(--display); letter-spacing: 0.02em; text-transform: uppercase; text-align: center;
+  max-width: 100%; padding: 8px 24px 10px; border: var(--line); border-radius: 16px; background: var(--yellow);
+  box-shadow: 5px 5px 0 var(--ink); rotate: -3deg;
+  font: 400 clamp(30px, 4vw, 46px)/1 var(--display); letter-spacing: 0.02em; text-transform: uppercase; text-align: center;
 }
 .banner-line {
-  max-width: min(540px, 100%); padding: 8px 18px; border: var(--line); border-radius: 14px; background: var(--cream);
-  box-shadow: var(--sh); font: 500 16px/1.4 var(--sans); text-align: center; text-wrap: balance;
+  max-width: min(460px, 100%); padding: 7px 16px; border: var(--line); border-radius: 14px; background: var(--cream);
+  box-shadow: var(--sh); font: 500 15px/1.4 var(--sans); text-align: center; text-wrap: balance;
 }
+/* In from the left with one fixed, small overshoot; both bands together. */
+@keyframes banner-in { 0% { transform: translateX(-110vw); } 70% { transform: translateX(18px); } 100% { transform: none; } }
 .banner.is-in .banner-name, .banner.is-in .banner-line {
-  opacity: 1; transform: none;
-  transition: transform .5s var(--spring), opacity .12s linear;
+  opacity: 1; transform: none; animation: banner-in .42s ease-out both;
 }
-.banner.is-in .banner-line { transition-delay: .07s; }
 .banner.is-out .banner-name, .banner.is-out .banner-line {
   opacity: 0; transform: translateX(110vw);
   transition: transform .36s cubic-bezier(0.55, 0, 0.75, 0.3), opacity .2s linear .16s;
 }
-.banner.is-out .banner-line { transition-delay: .04s, .2s; }
 
 /* ---------- Interact prompt ---------- */
 .prompt {
   --sh-current: 5px 5px 0 var(--ink);
-  position: fixed; z-index: 15; left: 50%; bottom: max(56px, calc(var(--safe-b) + 46px));
-  display: grid; justify-items: center; gap: 6px; padding: 12px 24px 14px; translate: -50% 0;
+  position: fixed; z-index: 15; left: 50%; bottom: max(14px, var(--safe-b));
+  display: grid; grid-auto-flow: column; align-items: center; gap: 16px; padding: 9px 20px 10px; translate: -50% 0;
   border: var(--line); border-radius: 18px; background: var(--yellow); color: var(--ink);
   box-shadow: 5px 5px 0 var(--ink); cursor: pointer; white-space: nowrap;
   rotate: -2deg; opacity: 0; scale: 0.6;
@@ -383,16 +411,22 @@ kbd.wide { min-width: 62px; }
 }
 .prompt.is-shown { opacity: 1; scale: 1; transition: scale .3s var(--spring), opacity .1s linear, box-shadow .12s var(--ease-out), translate .12s var(--ease-out); }
 .prompt:active { translate: calc(-50% + 2px) 2px; box-shadow: var(--sh-press); }
-.prompt-place { font: 400 30px/1 var(--display); letter-spacing: 0.02em; }
+.prompt-place { font: 400 26px/1 var(--display); letter-spacing: 0.02em; }
 .prompt-act { display: flex; align-items: center; gap: 7px; font: 500 15px/1 var(--sans); }
 .prompt kbd { min-width: 30px; height: 30px; }
-.is-touch .prompt { bottom: calc(max(24px, var(--safe-b) + 16px) + 160px); padding: 10px 20px 12px; }
-.is-touch .prompt-place { font-size: 26px; }
+.is-touch .prompt {
+  bottom: calc(max(24px, var(--safe-b) + 16px) + 160px); grid-auto-flow: row; justify-items: center; gap: 6px; padding: 10px 20px 12px;
+}
 
 /* ---------- Toasts ---------- */
 .toasts {
   position: fixed; z-index: 45; left: 50%; top: calc(max(16px, var(--safe-t)) + 4px); transform: translateX(-50%);
   display: grid; gap: 10px; justify-items: center; width: min(400px, calc(100vw - 28px)); pointer-events: none;
+  transition: transform .24s var(--ease-out);
+}
+/* With a panel open on a wide screen, keep toasts in the space left of it. */
+@media (min-width: 720px) {
+  body:has(.panel.is-open) .toasts { left: calc((100vw - 500px) / 2); width: min(400px, calc(100vw - 532px)); }
 }
 .toast {
   display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; width: 100%;
@@ -510,7 +544,6 @@ kbd.wide { min-width: 62px; }
 .panel-title {
   margin: 0; font: 400 36px/1.02 var(--display); letter-spacing: 0.01em; text-wrap: balance;
   transform: rotate(-2deg); transform-origin: 0 50%;
-  -webkit-text-stroke: 0; text-shadow: 2px 2px 0 rgba(255,255,255,0.55);
 }
 .panel-scroll {
   flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 22px 26px 26px;
@@ -557,13 +590,11 @@ kbd.wide { min-width: 62px; }
   display: grid; align-content: start; gap: 6px; padding: 12px 14px 14px;
   border: var(--line); border-radius: 14px; background: var(--cream-2); box-shadow: var(--sh-press);
 }
-.stats div:nth-child(odd) { rotate: -1deg; }
-.stats div:nth-child(even) { rotate: 1deg; }
-.stats dt { font: 400 32px/1 var(--display); letter-spacing: 0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stats dt { font: 400 32px/1 var(--display); letter-spacing: 0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; rotate: -2deg; transform-origin: 0 50%; }
 .stats dd { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.4; }
 
 .email { margin-top: 24px; }
-.email-label { margin: 0 0 8px; font: 400 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; }
+.email-label { margin: 0 0 8px; font: 400 15px/1.2 var(--display); letter-spacing: 0.02em; }
 .email-row {
   display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px;
   border: var(--line); border-radius: 14px; background: #fff; box-shadow: var(--sh-press);
@@ -591,9 +622,13 @@ kbd.wide { min-width: 62px; }
 .links { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 12px; }
 .links .btn { min-height: 48px; padding: 0 18px; font-size: 17px; }
 .links .btn svg { width: 15px; height: 15px; }
+.panel-scroll { container-type: inline-size; }
+@container (max-width: 479px) {
+  .links .btn { flex: 1 1 100%; justify-content: space-between; }
+}
 
 .tech { margin-top: 26px; }
-.tech-label { margin: 0 0 10px; font: 400 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; }
+.tech-label { margin: 0 0 10px; font: 400 15px/1.2 var(--display); letter-spacing: 0.02em; }
 .tech ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .tech li { padding: 5px 11px; border-radius: 999px; border: 2.5px solid var(--ink); background: #fff; font: 500 13.5px/1.2 var(--sans); }
 .panel-hint { margin: 26px 0 0; font-size: 14px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
@@ -606,6 +641,8 @@ kbd.wide { min-width: 62px; }
   transition: opacity .12s linear, scale .18s var(--ease-out);
 }
 .mapdlg.is-open, .pause.is-open, .howto.is-open { opacity: 1; scale: 1; transition: opacity .12s linear, scale .34s var(--spring); }
+/* Pause and the map are opened from the keyboard often: quick and plain, no bounce. */
+.mapdlg.is-open, .pause.is-open { transition: opacity .12s linear, scale .18s var(--ease-out); }
 .mapdlg { width: min(880px, calc(100vw - 36px)); max-height: calc(100svh - 36px); display: flex; flex-direction: column; overflow: hidden; }
 .mapdlg-body {
   display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start;
@@ -655,7 +692,7 @@ kbd.wide { min-width: 62px; }
 .pause-actions { display: grid; gap: 12px; }
 .pause-actions .btn { justify-content: flex-start; padding-left: 18px; }
 .pause-sound { margin-top: 18px; padding: 4px; border: var(--line); border-radius: 14px; background: #fff; }
-.pause-sound-label { margin: 8px 12px 0; font: 400 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.pause-sound-label { margin: 8px 12px 0; font: 400 15px/1.2 var(--display); letter-spacing: 0.02em; color: var(--ink-2); }
 .pause-exit {
   display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px auto 0; padding: 10px 14px; width: fit-content;
   border-radius: 10px; font: 600 15px/1.2 var(--sans); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px;
@@ -677,32 +714,99 @@ kbd.wide { min-width: 62px; }
 .howto[data-mode="touch"] [data-for="keys"], .howto:not([data-mode="touch"]) [data-for="touch"] { display: none; }
 .howto-go { margin-top: 20px; min-height: 56px; font-size: 21px; }
 .howto-any { margin: 12px 0 0; text-align: center; font-size: 13.5px; color: var(--ink-2); }
+/* Landscape phones: two columns of controls, so "Let's drive" is in view without scrolling. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .howto { width: min(720px, calc(100vw - 36px)); }
+  .howto .dlg-head { padding-top: 10px; padding-bottom: 10px; }
+  .howto .dlg-title { font-size: 24px; }
+  .howto-body { padding: 12px 20px 16px; }
+  .howto-lead { margin-bottom: 10px; font-size: 15px; }
+  .howto-keys { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .howto-keys div { min-height: 40px; padding: 4px 10px 4px 12px; }
+  .howto-keys dd { font-size: 13.5px; }
+  .howto-go { margin-top: 12px; min-height: 48px; font-size: 19px; }
+  .howto-any { margin-top: 8px; }
+}
 
-/* ---------- Phones ---------- */
-@media (max-width: 719px) {
+/* ---------- Compact HUD: phones either way up, and any short window ----------
+   The top strip holds the HUD rows; under them sits one slot shared by the arrival banner
+   (name only) and the prompt (which waits for the banner to go). Toasts stack under that slot. */
+@media (max-width: 719px), (max-height: 500px) {
+  :root { --slot-top: calc(max(12px, var(--safe-t)) + 96px); }
   .hud-left { top: max(12px, var(--safe-t)); left: max(12px, var(--safe-l)); gap: 10px; }
   .hud-right { top: max(12px, var(--safe-t)); right: max(12px, var(--safe-r)); gap: 8px; }
-  .hud-badges { gap: 8px; }
-  .badge { height: 36px; padding: 0 9px; gap: 5px; font-size: 15.5px; box-shadow: var(--sh-press); }
-  .badge-star svg { width: 17px; height: 17px; }
-  /* Phones: the speed badge sits under the round buttons, clear of the to-do card when it opens. */
-  .is-touch .speedo { left: auto; right: max(12px, var(--safe-r)); top: calc(max(12px, var(--safe-t)) + 52px); transform: rotate(-2deg); }
-  .is-touch .speedo-read { padding: 4px 9px 5px; }
-  .is-touch .speedo-num { font-size: 19px; }
+  .hud-badges { display: none; }
+  .speedo, .is-touch .speedo {
+    top: calc(max(12px, var(--safe-t)) + 54px); bottom: auto; left: auto; right: max(12px, var(--safe-r));
+    width: auto; height: auto; transform: rotate(-2deg);
+  }
+  .speedo-dial, .speedo-needle { display: none; }
+  .speedo-read, .is-touch .speedo-read { position: static; transform: none; padding: 4px 9px 5px; border-width: 3px; border-radius: 12px; box-shadow: var(--sh-press); }
+  .speedo-num, .is-touch .speedo-num { font-size: 19px; }
   .rbtn { width: 42px; height: 42px; box-shadow: var(--sh-press); }
   .rbtn svg { width: 20px; height: 20px; }
-  .todo { box-shadow: var(--sh-press); width: 236px; }
-  .todo-head { min-height: 36px; padding: 4px 8px 4px 11px; }
+  /* The head stays a chip in the top row; open, the list drops below it as its own card,
+     clear of the round buttons and narrow enough to leave the speed badge on the right alone. */
+  .todo, .todo:has(.todo-head[aria-expanded="false"]) { position: relative; width: auto; overflow: visible; box-shadow: var(--sh-press); }
+  .todo-head { min-height: 36px; padding: 4px 8px 4px 11px; border-radius: 13px; }
+  .todo-head:focus-visible { border-radius: 13px; }
+  .todo-list {
+    position: absolute; top: calc(100% + 10px); left: -3px;
+    width: min(256px, calc(100vw - max(12px, var(--safe-l)) - max(12px, var(--safe-r)) - 104px));
+    border: var(--line); border-radius: var(--radius); background: var(--cream); box-shadow: var(--sh-press);
+  }
   .todo-title { font-size: 16px; }
   .todo-count { font-size: 13px; }
-  .toasts { top: calc(max(12px, var(--safe-t)) + 100px); }
-  .banner { top: 30vh; }
+  .todo-item { font-size: 14.5px; }
+
+  .banner { top: var(--slot-top); width: calc(100vw - 32px); min-width: 0; }
+  .banner-line { display: none; }
+  .banner-name { padding: 6px 18px 8px; font-size: clamp(24px, 8vw, 30px); box-shadow: var(--sh); }
+  .prompt, .is-touch .prompt {
+    top: var(--slot-top); bottom: auto; grid-auto-flow: row; justify-items: center; gap: 5px;
+    width: max-content; max-width: calc(100vw - 32px); padding: 8px 18px 10px; white-space: normal; text-align: center;
+  }
+  .prompt-place { font-size: 24px; }
+  .prompt-act { font-size: 14.5px; }
+  .toasts { top: var(--slot-top); }
   /* With a sheet open, sit in the strip above it rather than over its header. */
   .is-paused .toasts { top: max(6px, var(--safe-t)); }
   .is-paused .toast { padding: 6px 12px 6px 8px; }
   .is-paused .toast-icon { width: 30px; height: 30px; }
   .is-paused .toast-icon svg { width: 15px; height: 15px; }
+}
+/* Landscape phones: the slot moves up into the gap between the two HUD clusters. */
+@media (max-height: 500px) and (min-width: 720px) {
+  :root { --slot-top: calc(max(8px, var(--safe-t)) + 4px); }
+  .banner { width: min(400px, calc(100vw - 420px)); }
+  .toasts { width: min(340px, calc(100vw - 480px)); }
+  /* Short screens: a smaller stick and a tighter to-do, so the open card clears the stick. */
+  .stick { width: 112px; height: 112px; }
+  .stick::before { inset: 20px; }
+  .stick-knob { width: 52px; height: 52px; }
+  /* The list ends above the stick's top edge (stick 112 + 24 from the bottom). */
+  .todo-list {
+    width: 288px; gap: 2px; padding: 6px 12px 8px; overflow-y: auto;
+    max-height: calc(100svh - max(12px, var(--safe-t)) - 54px - 112px - max(24px, calc(var(--safe-b) + 16px)));
+  }
+  .todo-item { min-height: 24px; }
+  .todo-box { width: 22px; height: 22px; }
+  .todo-extra { margin-top: 2px; padding-top: 5px; }
+}
 
+/* The narrowest phones: a smaller stick and horn so the two sides never meet. */
+@media (max-width: 359px) {
+  .stick { width: 112px; height: 112px; }
+  .stick::before { inset: 20px; }
+  .stick-knob { width: 52px; height: 52px; }
+  .tbtn-horn { width: 56px; height: 56px; }
+  .touch-buttons { gap: 10px; }
+  .hud-right { gap: 6px; }
+  .todo-head { gap: 6px; padding-left: 9px; }
+}
+
+/* ---------- Phones (portrait): bottom sheets ---------- */
+@media (max-width: 719px) {
   .panel, .mapdlg {
     top: auto; left: 0; right: 0; bottom: 0; width: auto; translate: none; scale: none;
     max-height: calc(100svh - max(24px, var(--safe-t)) - 28px);
@@ -739,7 +843,6 @@ kbd.wide { min-width: 62px; }
   /* A definite width, so the grid row knows the square canvas's height. */
   .mapdlg-paper { width: min(330px, calc(100vw - 42px)); }
 }
-@media (max-width: 360px) { .badge-logo { display: none; } }
 
 /* ---------- Reduced motion: opacity only, no overshoot, no slides; tilts stay ---------- */
 @media (prefers-reduced-motion: reduce) {
@@ -755,12 +858,23 @@ kbd.wide { min-width: 62px; }
   .toast, .toast.is-shown { transform: none; }
   .soundmenu, .soundmenu.is-open { transform: none; }
   .tag-card, .tag.is-shown .tag-card { scale: 1; }
-  .badge-star.is-bumped, .todo-item.is-new .todo-box, .tbtn-go.is-lit { animation: none; }
+  .todo-item.is-new .todo-box, .tbtn-go.is-lit { animation: none; }
   .todo-item .todo-box svg, .todo-item.is-new .todo-box svg { transform: none; transition: opacity .15s linear; }
   .banner-name, .banner-line, .banner.is-in .banner-name, .banner.is-in .banner-line,
-  .banner.is-out .banner-name, .banner.is-out .banner-line { transform: none; transition: opacity .2s linear; }
+  .banner.is-out .banner-name, .banner.is-out .banner-line { transform: none; animation: none; transition: opacity .2s linear; }
+  .toasts { transition: none; }
   .panel, .panel.is-open, .mapdlg, .mapdlg.is-open, .pause, .pause.is-open, .howto, .howto.is-open { transform: none; scale: 1; transition: opacity .15s linear; }
   @media (max-width: 719px) {
     .panel:not(.is-open), .mapdlg:not(.is-open) { opacity: 0; }
   }
 }
+
+/* ---------- Focus rings ----------
+   Components set their own box-shadow, which beats the plain :focus-visible rule above. This
+   later, more specific rule puts the brief's ring back: yellow, an ink ring outside it, and the
+   component's own hard shadow underneath. */
+:is(.btn, .rbtn, .close, .map-item, .email-copy, .backpill, .loader-exit, .prompt):focus-visible {
+  outline: 3px solid var(--ink); outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--yellow), var(--sh-current, 0 0 #0000);
+}
+.gallery:focus-visible { outline-offset: -3px; box-shadow: inset 0 0 0 6px var(--yellow); border-radius: 16px; }

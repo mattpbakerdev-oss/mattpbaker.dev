@@ -69,10 +69,6 @@
   <div class="hud-left">
     <div class="hud-badges">
       <p class="badge badge-logo" aria-hidden="true">Mattsville</p>
-      <p class="badge badge-star" id="hud-count">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/></svg>
-        <span id="hud-found" aria-hidden="true">0 / 4</span><span class="sr-only" id="hud-found-sr">Found 0 of 4</span>
-      </p>
     </div>
     <section class="todo" id="todo" aria-labelledby="todo-title">
       <button type="button" class="todo-head" id="todo-toggle" aria-expanded="true" aria-controls="todo-list">
@@ -126,7 +122,10 @@
   <svg class="speedo-dial" viewBox="0 0 120 120">
     <circle class="speedo-face" cx="60" cy="60" r="54"/>
     <g class="speedo-ticks" id="speedo-ticks"></g>
-    <g class="speedo-needle" id="speedo-needle"><path d="M56 63 L60 15 L64 63 Z"/></g>
+  </svg>
+  <!-- The needle is its own layer, turned with a CSS transform, so a moving needle never costs a layout. -->
+  <svg class="speedo-needle" id="speedo-needle" viewBox="0 0 120 120">
+    <path d="M56 63 L60 15 L64 63 Z"/>
     <circle class="speedo-hub" cx="60" cy="60" r="6.5"/>
   </svg>
   <p class="speedo-read"><span class="speedo-num" id="speedo-num">0</span><span class="speedo-unit">mph</span></p>

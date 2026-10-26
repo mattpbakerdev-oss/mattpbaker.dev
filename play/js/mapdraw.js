@@ -6,10 +6,11 @@ import { rampFootprint } from './physics.js';
 
 // Cartoon paper map: the town's own palette (world.js and models.js) with thick ink outlines.
 const INK = '#1E1424', CREAM = '#FFF4DC', YELLOW = '#FFD23F', GREEN = '#4CC26B';
-const PAPER = '#f6e7c4', GRASS = '#86c46a', LAWN = '#9bd37c', ROAD = '#5a5157', STONE = '#ead9bd', WATER = '#3FB6FF', RAMP = '#FFD23F';
+const PAPER = '#f6e7c4', GRASS = '#86c46a', LAWN = '#9bd37c', ROAD = '#5a5157', STONE = '#ead9bd', WATER = '#3FB6FF', RAMP = '#cdb48a'; // ramps: muted tan, so yellow stays for pins and labels
 // Pin icons, drawn on a 16 px grid (SVG path data, so Path2D can stroke them).
 const PIN_ICON = {
-  project: 'M8 2.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6L8 10.8l-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z',
+  // An app tile (a phone), so project pins never read as the collectible star.
+  project: 'M5.4 2.4h5.2a1.4 1.4 0 011.4 1.4v8.4a1.4 1.4 0 01-1.4 1.4H5.4A1.4 1.4 0 014 12.2V3.8a1.4 1.4 0 011.4-1.4z M7 11.2h2',
   about: 'M3 7.5L8 3.2l5 4.3V13H3z M6.6 13V9.6h2.8V13',
   contact: 'M2.8 4.6h10.4v7.2H2.8z M3 5l5 3.8L13 5',
   soon: 'M8 2.8l4.6 9.6H3.4z M5.6 9.2h4.8',
@@ -20,8 +21,10 @@ export const MODEL_COLOUR = {
 };
 
 const HALF = PLOT_HALF + 2;
-// Matt's house and the post office sit side by side; one label goes underneath.
+// Matt's house and the post office sit side by side: the house label goes underneath and the
+// post office's to the right of its building, so neither runs into the other or the Up Lock pin.
 const LABEL_BELOW = new Set(['Matt’s house']);
+const LABEL_RIGHT = new Set(['Post office']);
 
 /** World to canvas pixels for a square canvas `size` px wide with `pad` px of margin. */
 export function projector(size, pad) {
@@ -132,7 +135,13 @@ export function drawDynamic(ctx, size, { pad, places, visited, car, dot = 4 }) {
     ctx.stroke();
     if (big) icon(ctx, seen ? TICK : PIN_ICON[place.kind] ?? PIN_ICON.project, x, y, (r * 1.2) / 16, seen ? 2.6 : 1.9);
   }
+  if (car) drawCar(ctx, size, { pad, car, dot });
+}
+
+/** The car as an orange arrow badge pointing where it faces. */
+export function drawCar(ctx, size, { pad, car, dot = 4 }) {
   if (!car) return;
+  const P = projector(size, pad);
   const x = P.x(car.x), y = P.y(car.z);
   const fx = Math.sin(car.heading), fy = Math.cos(car.heading);
   const len = dot * 2.6, wid = dot * 1.7;
@@ -173,11 +182,17 @@ export function drawLabels(ctx, size, { pad, places, font = 13 }) {
     const x = P.x(rects.reduce((a, r) => a + r.x, 0) / rects.length);
     // Sit the label just above the building, or below it where a neighbour's label would clash.
     const below = LABEL_BELOW.has(label);
-    let y = below ? P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2 : P.y(minZ) - font * 1.2;
-    if (y < pad + font) y = P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2;
     const w = ctx.measureText(label).width + font * 1.1;
     const h = font * 1.75;
-    const lx = Math.max(pad + w / 2, Math.min(size - pad - w / 2, x));
+    let y = below ? P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2 : P.y(minZ) - font * 1.2;
+    if (y < pad + font) y = P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2;
+    let cx = x;
+    if (LABEL_RIGHT.has(label)) { // beside the building, level with its middle
+      const r = rects[0];
+      cx = P.x(r.x + r.w / 2) + font * 0.5 + w / 2;
+      y = P.y(r.z);
+    }
+    const lx = Math.max(pad + w / 2, Math.min(size - pad - w / 2, cx));
     ctx.fillStyle = INK;
     roundRect(ctx, lx - w / 2 + 2, y - h / 2 + 2, w, h, 7);
     ctx.fill();

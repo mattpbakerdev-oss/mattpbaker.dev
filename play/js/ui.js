@@ -7,13 +7,13 @@
 //   map-open, map-close, menu-open, pause-open, pause-close, sound { effects, music, on }
 import { PLACES } from './places.js';
 import { placeInRange, travelSpot } from './proximity.js';
-import { drawStatic, drawDynamic, drawLabels, placeAtMapPoint, MODEL_COLOUR } from './mapdraw.js';
+import { drawStatic, drawDynamic, drawLabels, drawCar, placeAtMapPoint, MODEL_COLOUR } from './mapdraw.js';
 import { createTouchControls } from './touch.js';
 import { storeGet, storeSet } from './storage.js';
 import { shouldDismiss } from './sheet.js';
-import { toMph, needleAngle, easeToward, DIAL_MAX_MPH } from './speedo.js';
+import { toMph, needleAngle, easeToward, createReadout, DIAL_MAX_MPH } from './speedo.js';
 import { createArrivals } from './arrival.js';
-import { objectiveProgress } from './objectives.js';
+import { objectiveProgress, extrasRow } from './objectives.js';
 
 const $ = (id) => document.getElementById(id);
 const FOCUSABLE = 'a[href], button:not([disabled]), video[controls], iframe, [tabindex]:not([tabindex="-1"])';
@@ -46,11 +46,18 @@ const ICON = {
 const isExternal = (href) => /^https?:\/\//.test(href);
 const KIND_LABEL = { project: 'Project', about: 'About me', contact: 'Get in touch', soon: 'Coming soon' };
 const BANNER_HOLD = 2500;
+// Layouts, kept in step with play.css. Compact: phones either way up (and any short window).
+const MQ_COMPACT = '(max-width: 719px), (max-height: 500px)';
+const MQ_MINIMAP = '(min-width: 900px) and (hover: hover) and (pointer: fine)';
+// The to-do starts as a chip on any touch device and on compact screens.
+const MQ_TODO_CHIP = '(pointer: coarse), (max-width: 719px), (max-height: 500px)';
+const TODO_PEEK = 3000;
 
 export function createUI({ car, chase, world, input, events, canvas, reducedMotion = false }) {
   const emit = (type, detail) => events.dispatchEvent(new CustomEvent(type, { detail }));
   const coarse = matchMedia('(pointer: coarse)');
   const isTouch = () => coarse.matches;
+  const compact = matchMedia(MQ_COMPACT);
 
   const hud = $('hud'), minimap = $('minimap'), minimapFrame = $('minimap-frame'), prompt = $('prompt'), touchEl = $('touch');
   const speedo = $('speedo'), backpill = $('backpill'), banner = $('banner'), pauseEl = $('pause');
@@ -102,6 +109,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     el.classList.add('is-open');
     scrim.classList.add('is-open');
     pauseGame(true);
+    refreshMinimap();
     (focus ?? el).focus({ preventScroll: true });
   }
 
@@ -115,6 +123,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     const done = () => { if (open !== el) el.hidden = true; if (!open) scrim.hidden = true; };
     if (reducedMotion) done(); else el._hideTimer = setTimeout(done, 220);
     pauseGame(false);
+    refreshMinimap();
     const onClose = el._onClose;
     el._onClose = null;
     if (restore) {
@@ -127,6 +136,12 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
 
   document.addEventListener('keydown', (e) => {
     if (!open) {
+      // Esc with the sound menu open closes the menu first (focus may be on the sound button).
+      if (e.key === 'Escape' && !soundMenu.hidden) {
+        e.preventDefault();
+        if (!e.repeat) closeSoundMenu({ restore: true });
+        return;
+      }
       // No dialog open: Esc or P pauses.
       const pauseKey = e.key === 'Escape' || (e.code === 'KeyP' && !e.metaKey && !e.ctrlKey && !e.altKey);
       if (started && pauseKey && !e.repeat && !e.defaultPrevented && !e.target?.closest?.('input, textarea, select, [contenteditable]')) {
@@ -137,8 +152,9 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     }
     // Keys that close a dialog stop here, so the game doesn't also act on them (M would reopen the map).
     const shut = () => { e.preventDefault(); e.stopPropagation(); closeDialog(); };
+    // A held key (from driving, or Esc that just opened Pause) must not close what it opened.
+    if (e.repeat && e.key !== 'Tab') { if (e.key === 'Escape') e.preventDefault(); return; }
     if (e.key === 'Escape') { shut(); return; }
-    if (e.repeat && e.key !== 'Tab') return; // a key held from driving must not close what it opened
     if (open === mapDlg && e.code === 'KeyM' && !e.metaKey && !e.ctrlKey) { shut(); return; }
     if (open === pauseEl && e.code === 'KeyP' && !e.metaKey && !e.ctrlKey) { shut(); return; }
     if (open === howto && !['Tab', 'Shift', 'Enter', ' ', 'Meta', 'Control', 'Alt'].includes(e.key)) { shut(); return; }
@@ -296,6 +312,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     panel.dataset.kind = place.kind;
     openPlace = place;
     openDialog(panel, { scrimClass: 'scrim-panel', onClose: () => { stopMedia(); emit('panel-close', { place }); openPlace = null; afterPanel(); } });
+    // The HUD hides while a panel is open, so the tick lands (and the to-do peeks) when it closes.
     panelBody.scrollTop = 0;
     const first = !visited.has(place.id);
     if (first) {
@@ -303,7 +320,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
       visited.add(place.id);
       storeSet(STORE.visited, JSON.stringify([...visited]));
       drawMinimapStatic();
-      renderTodo(place.id);
+      renderTodo();
+      freshTick = place.id;
       if (!wasComplete && objectiveProgress(visited).complete) allDonePending = true;
     }
     emit('panel-open', { place });
@@ -370,8 +388,10 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     const size = mapCanvas.clientWidth || 360;
     const ctx = sizeCanvas(mapCanvas, size);
     drawStatic(ctx, size, { pad: MAP_PAD, places: PLACES });
-    drawDynamic(ctx, size, { pad: MAP_PAD, places: PLACES, visited, car, dot: size > 400 ? 6 : 5 });
+    const dot = size > 400 ? 6 : 5;
+    drawDynamic(ctx, size, { pad: MAP_PAD, places: PLACES, visited, car: null, dot });
     drawLabels(ctx, size, { pad: MAP_PAD, places: PLACES, font: size > 400 ? 15 : 13 });
+    drawCar(ctx, size, { pad: MAP_PAD, car, dot }); // on top, so a label never hides where you are
   }
   // The building sites share one row; it takes you to the middle one.
   const sites = PLACES.filter((p) => p.kind === 'soon');
@@ -419,6 +439,11 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
   const MINI = 170, MINI_PAD = 8;
   const miniStatic = document.createElement('canvas');
   let miniCtx = null;
+  // Whether the minimap is on screen, cached so the render loop never asks the layout.
+  const miniMQ = matchMedia(MQ_MINIMAP);
+  let miniVisible = false;
+  function refreshMinimap() { miniVisible = Boolean(miniCtx) && started && !open && miniMQ.matches; }
+  miniMQ.addEventListener('change', refreshMinimap);
   function drawMinimapStatic() {
     const ctx = sizeCanvas(miniStatic, MINI);
     drawStatic(ctx, MINI, { pad: MINI_PAD, places: PLACES, detail: false });
@@ -428,7 +453,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     drawMinimapStatic();
   }
   function drawMinimap() {
-    if (!miniCtx || minimapFrame.hidden || !minimap.getClientRects().length) return;
+    if (!miniVisible) return;
     miniCtx.clearRect(0, 0, MINI, MINI);
     miniCtx.drawImage(miniStatic, 0, 0, MINI, MINI);
     drawDynamic(miniCtx, MINI, { pad: MINI_PAD, places: PLACES, visited, car, dot: 4.2 });
@@ -446,8 +471,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
       promptFor = null;
       prompt.classList.remove('is-shown');
       // Let the exit transition play, then take it out of the tab order.
-      if (reducedMotion) prompt.hidden = true;
-      else promptTimer = setTimeout(() => { prompt.hidden = true; }, 160);
+      if (reducedMotion) { prompt.hidden = true; placeToasts(); }
+      else promptTimer = setTimeout(() => { prompt.hidden = true; placeToasts(); }, 160);
       return;
     }
     $('prompt-place').textContent = place.title;
@@ -457,7 +482,22 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     prompt.hidden = false;
     if (wasHidden) void prompt.offsetWidth;
     prompt.classList.add('is-shown');
+    if (wasHidden) placeToasts();
   }
+
+  /**
+   * Toasts sit under whatever is in the top slot: the arrival banner, or the prompt where it lives
+   * at the top (phones). Measured only when one of them comes or goes, never per frame.
+   */
+  function placeToasts() {
+    let below = 0;
+    const inTop = (el) => !el.hidden && el.offsetHeight && el.offsetTop < innerHeight / 2;
+    if (bannerUp && inTop(banner)) below = banner.offsetTop + banner.offsetHeight;
+    else if (promptFor && inTop(prompt)) below = prompt.offsetTop + prompt.offsetHeight;
+    const shift = below ? Math.max(0, below + 16 - toasts.offsetTop) : 0; // 16: room for the tilt
+    toasts.style.transform = shift ? `translate(-50%, ${shift}px)` : '';
+  }
+  window.addEventListener('resize', () => { if (started) placeToasts(); });
   prompt.addEventListener('click', () => { const p = active ?? arrival; if (p) openPanel(p); });
 
   events.addEventListener('interact', () => {
@@ -515,15 +555,11 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
   soundMenu.addEventListener('focusout', (e) => { if (e.relatedTarget instanceof Element && !e.relatedTarget.closest('.hud-sound')) closeSoundMenu(); });
   setSound(sound);
 
-  let foundCount = null;
+  let found = { n: 0, total: 4 }, foundBumped = false;
   function setFound(n, total = 4) {
-    $('hud-found').textContent = `${n} / ${total}`;
-    $('hud-found-sr').textContent = `Found ${n} of ${total}`;
-    const badge = $('hud-count');
-    if (foundCount !== null && n > foundCount && !reducedMotion) {
-      badge.classList.remove('is-bumped'); void badge.offsetWidth; badge.classList.add('is-bumped');
-    }
-    foundCount = n;
+    foundBumped = n > found.n && started;
+    found = { n, total };
+    renderTodo();
   }
 
   /** Small note at the top of the screen: an icon disc, a title and a line. Returns the element. */
@@ -544,7 +580,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     touchEl.hidden = !started || !t;
     backpill.hidden = !started || t;
     howto.dataset.mode = t ? 'touch' : 'keys';
-    if (active || arrival) setPrompt(active ?? arrival);
+    if ((active || arrival) && !open && !holdPrompt()) setPrompt(active ?? arrival);
   }
   coarse.addEventListener('change', applyPointerMode);
 
@@ -553,8 +589,9 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     openDialog(howto, { scrimClass: 'scrim-dim', focus: howto.querySelector('.howto-go'), onClose: () => { storeSet(STORE.howto, 'seen'); back?.(); } });
   }
   function maybeHowTo() {
-    if (storeGet(STORE.howto)) return;
-    openHowTo();
+    // Desktop: the to-do opens for the first look, then folds to its chip once you're driving.
+    if (storeGet(STORE.howto)) { todoTimer = setTimeout(() => foldTodo(), 5000); return; }
+    openHowTo({ back: () => foldTodo() });
   }
 
   // ---------- Pause menu ----------
@@ -569,22 +606,52 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
 
   // ---------- To-do card ----------
   const todoToggle = $('todo-toggle'), todoList = $('todo-list');
+  const chipFirst = matchMedia(MQ_TODO_CHIP);
+  let freshTick = null, todoTimer = null, todoByHand = false;
   function renderTodo(fresh = null) {
     const p = objectiveProgress(visited);
+    const x = extrasRow(found.n, found.total);
     todoList.replaceChildren(...p.items.map((item) => h('li', { class: `todo-item${item.done ? ' is-done' : ''}${item.id === fresh ? ' is-new' : ''}` },
       h('span', { class: 'todo-box', 'aria-hidden': 'true', html: ICON.tick }),
       h('span', { class: 'todo-label' }, item.label),
-      h('span', { class: 'sr-only' }, item.done ? ', done' : ', not done yet'))));
+      h('span', { class: 'sr-only' }, item.done ? ', done' : ', not done yet'))),
+    // The collectibles: optional, so they sit apart with their own count, outside the four.
+    h('li', { class: `todo-item todo-extra${x.done ? ' is-done' : ''}${foundBumped ? ' is-new' : ''}` },
+      h('span', { class: 'todo-box', 'aria-hidden': 'true', html: x.done ? ICON.tick : ICON.star }),
+      h('span', { class: 'todo-label' }, x.label),
+      h('span', { class: 'todo-extra-count', 'aria-hidden': 'true' }, x.count),
+      h('span', { class: 'sr-only' }, `, optional, ${found.n} of ${found.total} found`)));
+    foundBumped = false;
     $('todo-count').textContent = `${p.done}/${p.total}`;
     $('todo-count-sr').textContent = `, ${p.done} of ${p.total} done`;
   }
   function setTodoOpen(on) { todoToggle.setAttribute('aria-expanded', String(on)); }
-  todoToggle.addEventListener('click', () => setTodoOpen(todoToggle.getAttribute('aria-expanded') !== 'true'));
+  todoToggle.addEventListener('click', () => {
+    todoByHand = true;
+    clearTimeout(todoTimer);
+    setTodoOpen(todoToggle.getAttribute('aria-expanded') !== 'true');
+  });
   renderTodo();
-  // Collapsed by default on phones, where the screen is busy.
-  setTodoOpen(!matchMedia('(max-width: 719px)').matches);
+  // A chip on touch devices and small screens, where the screen is busy; open on desktop at first.
+  setTodoOpen(!chipFirst.matches);
+  /** Fold the to-do to its chip, unless the visitor opened or closed it themselves. */
+  function foldTodo() {
+    clearTimeout(todoTimer);
+    if (!todoByHand) setTodoOpen(false);
+  }
+  /** A tick just landed: show the card for a moment on desktop, then fold it again. */
+  function peekTodo() {
+    if (!freshTick) return;
+    renderTodo(freshTick);
+    freshTick = null;
+    if (chipFirst.matches || todoByHand) return;
+    setTodoOpen(true);
+    clearTimeout(todoTimer);
+    todoTimer = setTimeout(() => foldTodo(), TODO_PEEK);
+  }
   let allDonePending = false;
   function afterPanel() {
+    peekTodo();
     if (!allDonePending) return;
     allDonePending = false;
     setTimeout(() => toast('That’s the tour. The building sites are for whatever I build next.', { title: 'All done', icon: 'flag', duration: 6500 }), 350);
@@ -614,26 +681,31 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
       }
     }
   })();
-  let shownMph = 0, shownNum = -1;
+  let shownMph = 0;
+  const readout = createReadout();
   function updateSpeedo(dt) {
     const target = car.frozen ? 0 : toMph(car.speed);
     shownMph = easeToward(shownMph, target, dt, 8);
-    needle.style.transform = `rotate(${needleAngle(shownMph).toFixed(2)}deg)`;
-    const n = Math.round(shownMph);
-    if (n !== shownNum) { shownNum = n; speedNum.textContent = String(n); }
+    const r = readout.step(shownMph); // only what changed, so most frames write nothing
+    if (r.angle !== null) needle.style.transform = `rotate(${r.angle}deg)`;
+    if (r.num !== null) speedNum.textContent = r.num;
   }
 
   // ---------- Arrival banners ----------
   const arrivals = createArrivals(PLACES);
   let bannerTimer = null, bannerOutTimer = null;
+  let bannerUp = false; // in, or still sliding out: the top slot is taken
+  const bannerGone = () => { bannerUp = false; banner.classList.remove('is-out'); placeToasts(); };
   function hideBanner(now = false) {
-    clearTimeout(bannerTimer); clearTimeout(bannerOutTimer);
     if (!banner.classList.contains('is-in')) return;
+    clearTimeout(bannerTimer); clearTimeout(bannerOutTimer);
     banner.classList.remove('is-in');
-    if (now) { banner.classList.remove('is-out'); return; }
+    if (now || reducedMotion) { bannerGone(); return; }
     banner.classList.add('is-out');
-    bannerOutTimer = setTimeout(() => banner.classList.remove('is-out'), 600);
+    bannerOutTimer = setTimeout(bannerGone, 450);
   }
+  /** On phones the prompt shares the banner's slot at the top, so it waits for the banner to go. */
+  const holdPrompt = () => bannerUp && compact.matches;
   function showBanner(place) {
     clearTimeout(bannerTimer); clearTimeout(bannerOutTimer);
     const soon = place.kind === 'soon';
@@ -642,6 +714,9 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     banner.classList.remove('is-in', 'is-out');
     void banner.offsetWidth;
     banner.classList.add('is-in');
+    bannerUp = true;
+    if (holdPrompt()) setPrompt(null);
+    placeToasts();
     bannerTimer = setTimeout(() => hideBanner(), BANNER_HOLD);
   }
 
@@ -659,12 +734,13 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
       minimapFrame.hidden = false;
       speedo.hidden = false;
       initMinimap();
+      refreshMinimap();
       applyPointerMode();
       maybeHowTo();
     },
     update(dt = 0) {
       if (!started) return;
-      const arrived = arrivals.update(car.x, car.z, { blocked: Boolean(open) });
+      const arrived = arrivals.update(car.x, car.z, { blocked: Boolean(open), heading: car.heading });
       if (arrived) showBanner(arrived);
       if (open) hideBanner(true);
       updateSpeedo(dt);
@@ -674,13 +750,14 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
       if (now !== shown) {
         const entered = now && active === now && shown !== now;
         shown = now;
-        setPrompt(open ? null : now);
+        setPrompt(open || holdPrompt() ? null : now);
         touchInteract.setAttribute('aria-disabled', String(!now));
         touchInteract.classList.toggle('is-lit', Boolean(now));
         if (entered) announce(`${now.title}. ${isTouch() ? 'Tap the hand button' : 'Press E'} to look inside.`);
       }
-      if (open && promptFor) setPrompt(null);
-      if (!open && now && !promptFor) setPrompt(now);
+      const hold = Boolean(open) || holdPrompt();
+      if (hold && promptFor) setPrompt(null);
+      if (!hold && now && !promptFor) setPrompt(now);
       drawMinimap();
     },
     openPanel, openMap, openPause, closeDialog, travel, toast, setFound, setSound, closeSoundMenu,
