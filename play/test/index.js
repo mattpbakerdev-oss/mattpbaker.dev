@@ -18,3 +18,4 @@ import './rim.test.mjs';
 import './speedo.test.mjs';
 import './arrival.test.mjs';
 import './objectives.test.mjs';
+import './titlecam.test.mjs';

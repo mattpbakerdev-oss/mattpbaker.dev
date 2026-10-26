@@ -4,10 +4,17 @@ import { ROADS, PLAZA, FOUNTAIN, RAMPS, PARK, PLOT_HALF, PLOT_CORNER } from './l
 import { footprintRect, ringCentre } from './places.js';
 import { rampFootprint } from './physics.js';
 
-const INK = '#F5F1EE';
-const AMBER = '#E0A94A';
-// The town's own palette (world.js and models.js), drawn on a warm paper card.
-const PAPER = '#efe3cf', GRASS = '#7cb860', LAWN = '#8cc46c', ROAD = '#4a4547', STONE = '#dccbb4', WATER = '#7fcfd6', RAMP = '#f2c14e';
+// Cartoon paper map: the town's own palette (world.js and models.js) with thick ink outlines.
+const INK = '#1E1424', CREAM = '#FFF4DC', YELLOW = '#FFD23F', GREEN = '#4CC26B';
+const PAPER = '#f6e7c4', GRASS = '#86c46a', LAWN = '#9bd37c', ROAD = '#5a5157', STONE = '#ead9bd', WATER = '#3FB6FF', RAMP = '#FFD23F';
+// Pin icons, drawn on a 16 px grid (SVG path data, so Path2D can stroke them).
+const PIN_ICON = {
+  project: 'M8 2.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6L8 10.8l-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z',
+  about: 'M3 7.5L8 3.2l5 4.3V13H3z M6.6 13V9.6h2.8V13',
+  contact: 'M2.8 4.6h10.4v7.2H2.8z M3 5l5 3.8L13 5',
+  soon: 'M8 2.8l4.6 9.6H3.4z M5.6 9.2h4.8',
+};
+const TICK = 'M4.2 8.4l2.6 2.6 5-5.6';
 export const MODEL_COLOUR = {
   gym: '#e8735a', condo: '#5bb5a2', studio: '#8f7ad8', house: '#f3e7d3', 'post-office': '#f2c14e', site: '#b88a5a',
 };
@@ -32,36 +39,47 @@ export function drawStatic(ctx, size, { pad, places, detail = true }) {
   const P = projector(size, pad);
   ctx.clearRect(0, 0, size, size);
   ctx.fillStyle = PAPER;
-  roundRect(ctx, 0, 0, size, size, detail ? 14 : 12);
-  ctx.fill();
+  ctx.fillRect(0, 0, size, size);
+  const outline = detail ? 2.5 : 1.6;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK;
   // Town plot, with the same rounded corners as the boundary.
   ctx.fillStyle = GRASS;
   roundRect(ctx, P.x(-PLOT_HALF), P.y(-PLOT_HALF), PLOT_HALF * 2 * P.s, PLOT_HALF * 2 * P.s, PLOT_CORNER * P.s);
   ctx.fill();
+  ctx.lineWidth = outline;
+  ctx.stroke();
   ctx.fillStyle = LAWN;
   roundRect(ctx, P.x(PARK.x - PARK.w / 2), P.y(PARK.z - PARK.d / 2), PARK.w * P.s, PARK.d * P.s, 6 * P.s);
   ctx.fill();
   // Roads, then the paved square and the fountain on top.
+  // Roads: an ink casing under the tarmac, so every road has a thick outline.
+  const grow = outline;
+  ctx.fillStyle = INK;
+  for (const r of ROADS) ctx.fillRect(P.x(r.x - r.w / 2) - grow, P.y(r.z - r.d / 2) - grow, r.w * P.s + grow * 2, r.d * P.s + grow * 2);
   ctx.fillStyle = ROAD;
   for (const r of ROADS) ctx.fillRect(P.x(r.x - r.w / 2), P.y(r.z - r.d / 2), r.w * P.s, r.d * P.s);
   ctx.fillStyle = STONE;
   ctx.beginPath();
   ctx.arc(P.x(PLAZA.x), P.y(PLAZA.z), PLAZA.r * P.s, 0, Math.PI * 2);
   ctx.fill();
+  ctx.stroke();
   ctx.fillStyle = WATER;
   ctx.beginPath();
   ctx.arc(P.x(FOUNTAIN.x), P.y(FOUNTAIN.z), FOUNTAIN.r * P.s, 0, Math.PI * 2);
   ctx.fill();
+  ctx.stroke();
   if (detail) {
     ctx.fillStyle = RAMP;
     for (const ramp of RAMPS) {
       const f = rampFootprint(ramp);
       ctx.fillRect(P.x(f.x - f.w / 2), P.y(f.z - f.d / 2), f.w * P.s, f.d * P.s);
+      ctx.strokeRect(P.x(f.x - f.w / 2), P.y(f.z - f.d / 2), f.w * P.s, f.d * P.s);
     }
   }
-  // Buildings in their own colours, with a soft outline so the cream house reads on grass.
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(44,37,38,0.35)';
+  // Buildings in their own colours, outlined in ink.
+  ctx.lineWidth = outline;
+  ctx.strokeStyle = INK;
   for (const place of places) {
     const r = footprintRect(place);
     ctx.fillStyle = MODEL_COLOUR[place.model] ?? '#b88a5a';
@@ -71,34 +89,70 @@ export function drawStatic(ctx, size, { pad, places, detail = true }) {
   }
 }
 
-/** Ring dots (amber until visited), then the car as an arrow pointing where it faces. */
+const paths = new Map();
+const path = (d) => { if (!paths.has(d)) paths.set(d, new Path2D(d)); return paths.get(d); };
+
+/** Draw a 16 px icon path centred on (x, y) at `scale`, stroked in ink. */
+function icon(ctx, d, x, y, scale, width = 1.9) {
+  ctx.save();
+  ctx.translate(x - 8 * scale, y - 8 * scale);
+  ctx.scale(scale, scale);
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK;
+  ctx.stroke(path(d));
+  ctx.restore();
+}
+
+/**
+ * Pins for every place (a round badge in the building's colour with its kind's icon, or a green
+ * tick once visited), then the car as an arrow badge pointing where it faces. Below `dot` 5 the
+ * pins are plain dots, for the minimap.
+ */
 export function drawDynamic(ctx, size, { pad, places, visited, car, dot = 4 }) {
   const P = projector(size, pad);
+  const big = dot >= 5;
   for (const place of places) {
     const [cx, cz] = ringCentre(place);
     const seen = visited.has(place.id);
+    const x = P.x(cx), y = P.y(cz), r = big ? dot * 2.1 : dot;
+    if (big) { // hard shadow
+      ctx.beginPath();
+      ctx.arc(x + 2, y + 2, r, 0, Math.PI * 2);
+      ctx.fillStyle = INK;
+      ctx.fill();
+    }
     ctx.beginPath();
-    ctx.arc(P.x(cx), P.y(cz), dot, 0, Math.PI * 2);
-    ctx.fillStyle = seen ? '#8a7f7a' : AMBER;
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = seen ? GREEN : big ? (MODEL_COLOUR[place.model] ?? YELLOW) : YELLOW;
     ctx.fill();
-    ctx.lineWidth = Math.max(1.5, dot * 0.4);
-    ctx.strokeStyle = '#1C1717';
+    ctx.lineWidth = big ? 2.5 : 1.8;
+    ctx.strokeStyle = INK;
     ctx.stroke();
+    if (big) icon(ctx, seen ? TICK : PIN_ICON[place.kind] ?? PIN_ICON.project, x, y, (r * 1.2) / 16, seen ? 2.6 : 1.9);
   }
   if (!car) return;
   const x = P.x(car.x), y = P.y(car.z);
   const fx = Math.sin(car.heading), fy = Math.cos(car.heading);
-  const len = dot * 2.6, wid = dot * 1.6;
-  ctx.beginPath();
-  ctx.moveTo(x + fx * len, y + fy * len);
-  ctx.lineTo(x - fx * len * 0.6 + fy * wid, y - fy * len * 0.6 - fx * wid);
-  ctx.lineTo(x - fx * len * 0.25, y - fy * len * 0.25);
-  ctx.lineTo(x - fx * len * 0.6 - fy * wid, y - fy * len * 0.6 + fx * wid);
-  ctx.closePath();
+  const len = dot * 2.6, wid = dot * 1.7;
+  const arrow = (ox, oy) => {
+    ctx.beginPath();
+    ctx.moveTo(ox + x + fx * len, oy + y + fy * len);
+    ctx.lineTo(ox + x - fx * len * 0.7 + fy * wid, oy + y - fy * len * 0.7 - fx * wid);
+    ctx.lineTo(ox + x - fx * len * 0.3, oy + y - fy * len * 0.3);
+    ctx.lineTo(ox + x - fx * len * 0.7 - fy * wid, oy + y - fy * len * 0.7 + fx * wid);
+    ctx.closePath();
+  };
+  ctx.lineJoin = 'round';
+  arrow(1.5, 1.5);
   ctx.fillStyle = INK;
   ctx.fill();
+  arrow(0, 0);
+  ctx.fillStyle = '#FF8A1E';
+  ctx.fill();
   ctx.lineWidth = 2;
-  ctx.strokeStyle = '#1C1717';
+  ctx.strokeStyle = INK;
   ctx.stroke();
 }
 
@@ -111,7 +165,7 @@ export function drawLabels(ctx, size, { pad, places, font = 13 }) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(footprintRect(place));
   }
-  ctx.font = `600 ${font}px Onest, "Segoe UI", Helvetica, Arial, sans-serif`;
+  ctx.font = `400 ${font}px "Lilita One", "Arial Rounded MT Bold", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const [label, rects] of groups) {
@@ -119,19 +173,22 @@ export function drawLabels(ctx, size, { pad, places, font = 13 }) {
     const x = P.x(rects.reduce((a, r) => a + r.x, 0) / rects.length);
     // Sit the label just above the building, or below it where a neighbour's label would clash.
     const below = LABEL_BELOW.has(label);
-    let y = below ? P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.1 : P.y(minZ) - font * 1.1;
-    if (y < pad + font) y = P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.1;
+    let y = below ? P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2 : P.y(minZ) - font * 1.2;
+    if (y < pad + font) y = P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2;
     const w = ctx.measureText(label).width + font * 1.1;
     const h = font * 1.75;
     const lx = Math.max(pad + w / 2, Math.min(size - pad - w / 2, x));
-    ctx.fillStyle = 'rgba(28,23,23,0.92)';
-    roundRect(ctx, lx - w / 2, y - h / 2, w, h, h / 2);
+    ctx.fillStyle = INK;
+    roundRect(ctx, lx - w / 2 + 2, y - h / 2 + 2, w, h, 7);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(245,241,238,0.14)';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = CREAM;
+    roundRect(ctx, lx - w / 2, y - h / 2, w, h, 7);
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = INK;
-    ctx.fillText(label, lx, y + 0.5);
+    ctx.fillText(label, lx, y + 1);
   }
 }
 

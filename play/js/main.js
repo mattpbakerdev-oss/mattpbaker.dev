@@ -1,4 +1,4 @@
-// Boot: loading screen, renderer, world, car, camera and the render loop.
+// Boot: title screen, renderer, world, car, camera and the render loop.
 import * as THREE from 'three';
 import { buildWorld } from './world.js';
 import './models.js'; // registers the building builders before the world is built
@@ -13,6 +13,7 @@ import { createFader } from './fader.js';
 import { createExtras } from './extras.js';
 import { createAudio } from './audio.js';
 import { WebGLFailure, isWebGLFailure } from './bootfail.js';
+import { orbitPose, swoopBlend } from './titlecam.js';
 
 const MAX_PIXEL_RATIO = 1.75;
 const MAX_DT = 0.05;   // clamp long frames (tab switches) so the car never tunnels
@@ -103,6 +104,17 @@ async function boot() {
   scene.add(car.object);
   const chase = createChaseCamera(camera, car, { reducedMotion, occluders: cameraOccluders(world.colliders) });
   chase.snap();
+  // Title camera: orbit the square until Start, then swoop down to the chase camera.
+  let started = false, titleClock = 0, swoop = null;
+  const fromPos = new THREE.Vector3(), fromQuat = new THREE.Quaternion();
+  const toPos = new THREE.Vector3(), toQuat = new THREE.Quaternion();
+  function titleCamera(dt) {
+    titleClock += dt;
+    const p = orbitPose(titleClock, reducedMotion);
+    camera.position.set(p.x, p.y, p.z);
+    camera.lookAt(p.lookX, p.lookY, p.lookZ);
+  }
+  titleCamera(0);
   const fader = createFader(scene, world);
   const input = createInput(window);
   input.setEnabled(false);
@@ -119,7 +131,7 @@ async function boot() {
 
   world.update(0, car.position, camera);
   await renderer.compileAsync(scene, camera).catch(() => {});
-  progress(1);
+  progress(0.9);
 
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
@@ -141,8 +153,19 @@ async function boot() {
 
     const steps = Math.ceil(dt / STEP);
     for (let i = 0; i < steps; i++) car.update(dt / steps, input.state);
-    chase.setFocus(ui.active);
-    chase.update(dt);
+    if (!started) titleCamera(dt);
+    else {
+      chase.setFocus(ui.active);
+      chase.update(dt);
+      if (swoop) { // blend from where the orbit left off into the chase camera
+        swoop.t += dt;
+        const k = swoopBlend(swoop.t);
+        toPos.copy(camera.position); toQuat.copy(camera.quaternion);
+        camera.position.lerpVectors(fromPos, toPos, k);
+        camera.quaternion.slerpQuaternions(fromQuat, toQuat, k);
+        if (k >= 1) swoop = null;
+      }
+    }
     fader.update(dt, chase.blocking, camera.position);
     ui.update(dt);
     markers.update(dt, ui.active?.id ?? null, ui.visited, camera);
@@ -152,24 +175,56 @@ async function boot() {
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
-  requestAnimationFrame((t) => { last = t; frame(t); });
+  requestAnimationFrame((t) => { last = t; frame(t); loader.classList.add('is-drawing'); });
+  // The first frame compiles anything compileAsync missed; let it land before calling it ready.
+  await nextFrame();
+  await nextFrame();
+  progress(1);
 
   window.__game = { renderer, scene, camera, car, world, input, chase, fader, events, ui, markers, extras, audio };
 
+  // Ready: any key, click or tap starts (and unlocks audio, since it happens inside that event).
+  const touchFirst = matchMedia('(pointer: coarse)').matches;
+  startBtn.textContent = touchFirst ? 'Tap to start' : 'Press any key to start';
   status.textContent = 'Mattsville is ready';
   loader.classList.add('is-ready');
   startBtn.hidden = false;
   startBtn.focus({ preventScroll: true });
-  startBtn.addEventListener('click', () => {
+
+  const IGNORE = new Set(['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'ContextMenu']);
+  function start(e) {
+    if (started) return;
+    started = true;
+    e?.preventDefault(); // the key that starts must not also reach the car, the map or the how-to card
+    if (e?.type === 'keydown') e.stopPropagation();
+    document.removeEventListener('keydown', onKey, true);
+    loader.removeEventListener('click', onClick);
     loader.classList.add('is-leaving');
     const done = () => { loader.hidden = true; };
     if (reducedMotion) done(); else loader.addEventListener('transitionend', done, { once: true });
     setTimeout(done, 800); // in case transitionend never fires
+    if (!reducedMotion) {
+      // Blend from the orbit pose the camera is in now to the chase spot.
+      fromPos.copy(camera.position); fromQuat.copy(camera.quaternion);
+      chase.snap();
+      swoop = { t: 0 };
+    } else chase.snap();
     input.setEnabled(true);
     canvas.focus({ preventScroll: true });
     ui.start();
     emit('start');
-  }, { once: true });
+  }
+  function onKey(e) {
+    if (IGNORE.has(e.key) || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('a')) return; // the normal-site link
+    start(e);
+  }
+  function onClick(e) {
+    if (e.target.closest('a')) return;
+    start(e);
+  }
+  document.addEventListener('keydown', onKey, true);
+  loader.addEventListener('click', onClick);
 }
 
 boot().catch((err) => {

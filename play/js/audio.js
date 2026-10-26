@@ -221,7 +221,7 @@ export function createAudio({ events, car, ui, storage = safeStorage() }) {
   events.addEventListener('walker-hit', () => play('hop'));
   events.addEventListener('collect', () => play('chime'));
   events.addEventListener('collect-all', () => play('fanfare'));
-  for (const type of ['panel-open', 'panel-close', 'map-open', 'map-close', 'menu-open']) events.addEventListener(type, () => play('click'));
+  for (const type of ['panel-open', 'panel-close', 'map-open', 'map-close', 'menu-open', 'pause-open', 'pause-close']) events.addEventListener(type, () => play('click'));
 
   return {
     get settings() { return { ...settings }; },

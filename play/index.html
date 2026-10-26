@@ -16,12 +16,12 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://mattpbaker.dev/play/og.jpg">
-<meta name="theme-color" content="#120F0F">
+<meta name="theme-color" content="#9fd3ff">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Onest:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/play/play.css">
 <script type="importmap">
 {
@@ -38,71 +38,104 @@
 
 <div class="loader" id="loader">
   <main class="loader-card">
-    <h1 class="wordmark">Matt Baker</h1>
-    <p class="loader-intro">A small town of things I've built. Drive up to a building to look inside.</p>
+    <h1 class="logo"><span class="logo-word">Mattsville</span></h1>
+    <p class="logo-tag">A portfolio by Matt Baker</p>
     <div class="loader-progress">
-      <p class="loader-status" id="loader-status" aria-live="polite">Loading Mattsville</p>
-      <div class="loader-track" role="progressbar" aria-label="Loading Mattsville" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <span class="loader-bar" id="loader-bar"></span>
+      <div class="fuel" role="progressbar" aria-label="Loading Mattsville" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="fuel-end" aria-hidden="true">E</span>
+        <span class="fuel-track"><span class="loader-bar" id="loader-bar"></span></span>
+        <span class="fuel-end" aria-hidden="true">F</span>
       </div>
-      <button type="button" class="pill pill-amber" id="start" hidden>
-        Start driving
-        <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
-      </button>
+      <p class="loader-status" id="loader-status" aria-live="polite">Fuelling up…</p>
+      <button type="button" class="btn btn-yellow btn-big start" id="start" hidden>Press any key to start</button>
     </div>
     <div class="fallback" id="fallback" hidden>
       <h2 class="fallback-title">This browser can’t draw the town</h2>
       <p class="fallback-text">Mattsville needs WebGL, which is switched off or missing here. Everything in the town is on the normal site.</p>
-      <a class="pill pill-amber" href="/">
-        Go to mattpbaker.dev
-        <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
-      </a>
+      <a class="btn btn-yellow" href="/">Go to mattpbaker.dev</a>
       <p class="fallback-or" id="fallback-or-label">Or go straight to</p>
       <ul class="fallback-links" id="fallback-links" aria-labelledby="fallback-or-label"></ul>
     </div>
     <div class="fallback" id="boot-error" hidden>
       <h2 class="fallback-title">Something went wrong loading Mattsville</h2>
       <p class="fallback-text">The town didn’t load this time. Everything in it is on the normal site.</p>
-      <a class="pill pill-amber" href="/">
-        Go to mattpbaker.dev
-        <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
-      </a>
+      <a class="btn btn-yellow" href="/">Go to mattpbaker.dev</a>
     </div>
   </main>
   <a class="loader-exit" href="/">Prefer the normal site? <span>mattpbaker.dev</span></a>
 </div>
 
 <header class="hud" id="hud" hidden>
-  <nav class="hud-bar" aria-label="Game">
-    <a class="hud-mark" href="/" aria-label="Back to mattpbaker.dev">Matt Baker</a>
-    <p class="hud-count" id="hud-count">
-      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"/></svg>
-      <span id="hud-found">Found 0 of 4</span>
-    </p>
-    <button type="button" class="hud-btn" id="hud-map" aria-haspopup="dialog">
-      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v10l-4 1.5-5-2-4 1.5z"/><path d="M5.5 2v10M10.5 4v10"/></svg>
-      <span>Map</span><kbd class="hud-key" aria-hidden="true">M</kbd>
+  <div class="hud-left">
+    <div class="hud-badges">
+      <p class="badge badge-logo" aria-hidden="true">Mattsville</p>
+      <p class="badge badge-star" id="hud-count">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/></svg>
+        <span id="hud-found" aria-hidden="true">0 / 4</span><span class="sr-only" id="hud-found-sr">Found 0 of 4</span>
+      </p>
+    </div>
+    <section class="todo" id="todo" aria-labelledby="todo-title">
+      <button type="button" class="todo-head" id="todo-toggle" aria-expanded="true" aria-controls="todo-list">
+        <span class="todo-title" id="todo-title">To do</span>
+        <span class="todo-count" id="todo-count" aria-hidden="true">0/4</span>
+        <span class="sr-only" id="todo-count-sr">, 0 of 4 done</span>
+        <svg class="todo-chev" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+      </button>
+      <ul class="todo-list" id="todo-list"></ul>
+    </section>
+  </div>
+  <nav class="hud-right" aria-label="Game">
+    <button type="button" class="rbtn" id="hud-map" aria-haspopup="dialog" aria-label="Map">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5l5.5-2.5 7 3 5.5-2.5v13l-5.5 2.5-7-3L3 19.5z"/><path d="M8.5 4v13M15.5 7v13"/></svg>
+      <kbd class="rbtn-key" aria-hidden="true">M</kbd>
     </button>
     <div class="hud-sound">
-      <button type="button" class="hud-btn hud-icon" id="hud-sound" aria-expanded="false" aria-controls="sound-menu" aria-label="Sound settings">
-        <svg class="icon-off" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M11 6l3.5 4M14.5 6L11 10"/></svg>
-        <svg class="icon-on" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.8 5.6a3.4 3.4 0 010 4.8M12.8 3.8a6 6 0 010 8.4"/></svg>
+      <button type="button" class="rbtn" id="hud-sound" aria-expanded="false" aria-controls="sound-menu" aria-label="Sound settings">
+        <svg class="icon-off" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h3.5L12 4.5v15L6.5 15H3z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+        <svg class="icon-on" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h3.5L12 4.5v15L6.5 15H3z"/><path d="M15.8 8.6a4.8 4.8 0 010 6.8M18.6 6a8.6 8.6 0 010 12"/></svg>
       </button>
       <div class="soundmenu" id="sound-menu" role="group" aria-label="Sound" hidden>
-        <button type="button" class="soundmenu-row" role="switch" aria-checked="true" data-setting="effects">
-          <span class="soundmenu-text"><span class="soundmenu-name">Effects</span><span class="soundmenu-hint">Engine, horn, bumps</span></span>
+        <button type="button" class="switchrow" role="switch" aria-checked="true" data-setting="effects">
+          <span class="switchrow-text"><span class="switchrow-name">Effects</span><span class="switchrow-hint">Engine, horn, bumps</span></span>
           <span class="switch" aria-hidden="true"></span>
         </button>
-        <button type="button" class="soundmenu-row" role="switch" aria-checked="false" data-setting="music">
-          <span class="soundmenu-text"><span class="soundmenu-name">Music</span><span class="soundmenu-hint">A short, quiet loop</span></span>
+        <button type="button" class="switchrow" role="switch" aria-checked="false" data-setting="music">
+          <span class="switchrow-text"><span class="switchrow-name">Music</span><span class="switchrow-hint">A short, quiet loop</span></span>
           <span class="switch" aria-hidden="true"></span>
         </button>
       </div>
     </div>
+    <button type="button" class="rbtn" id="hud-pause" aria-haspopup="dialog" aria-label="Pause">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="5.5" y="4.5" width="4.6" height="15" rx="1.6"/><rect x="13.9" y="4.5" width="4.6" height="15" rx="1.6"/></svg>
+      <kbd class="rbtn-key" aria-hidden="true">P</kbd>
+    </button>
   </nav>
 </header>
 
-<canvas class="minimap" id="minimap" aria-hidden="true" hidden></canvas>
+<div class="minimap" id="minimap-frame" aria-hidden="true" hidden>
+  <canvas id="minimap"></canvas>
+  <span class="minimap-n">N</span>
+</div>
+
+<a class="backpill" id="backpill" href="/" hidden>
+  <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3M7 4L3 8l4 4"/></svg>
+  <span><span class="sr-only">Back to </span>mattpbaker.dev</span>
+</a>
+
+<div class="speedo" id="speedo" aria-hidden="true" hidden>
+  <svg class="speedo-dial" viewBox="0 0 120 120">
+    <circle class="speedo-face" cx="60" cy="60" r="54"/>
+    <g class="speedo-ticks" id="speedo-ticks"></g>
+    <g class="speedo-needle" id="speedo-needle"><path d="M56 63 L60 15 L64 63 Z"/></g>
+    <circle class="speedo-hub" cx="60" cy="60" r="6.5"/>
+  </svg>
+  <p class="speedo-read"><span class="speedo-num" id="speedo-num">0</span><span class="speedo-unit">mph</span></p>
+</div>
+
+<div class="banner" id="banner" aria-hidden="true">
+  <p class="banner-name" id="banner-name"></p>
+  <p class="banner-line" id="banner-line"></p>
+</div>
 
 <button type="button" class="prompt" id="prompt" hidden>
   <span class="prompt-place" id="prompt-place"></span>
@@ -119,10 +152,10 @@
   <div class="stick" data-stick aria-hidden="true"><span class="stick-knob" data-knob></span></div>
   <div class="touch-buttons">
     <button type="button" class="tbtn tbtn-horn" data-hold="horn" aria-label="Horn">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.6"/><path d="M7.6 11h3.4l4.6-3.9v9.8L11 13H7.6"/><path d="M18.6 9.6a3.4 3.4 0 010 4.8M21 7.6a6.2 6.2 0 010 8.8"/></svg>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.6"/><path d="M7.6 11h3.4l4.6-3.9v9.8L11 13H7.6"/><path d="M18.6 9.6a3.4 3.4 0 010 4.8M21 7.6a6.2 6.2 0 010 8.8"/></svg>
     </button>
     <button type="button" class="tbtn tbtn-go" id="touch-interact" data-hold="interact" aria-label="Look inside" aria-disabled="true">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9l8-5 8 5v11"/><path d="M10 20v-6h4v6"/></svg>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14V5.5a1.5 1.5 0 013 0V11M11 10.5V4a1.5 1.5 0 013 0v6.5M14 10.5V5.5a1.5 1.5 0 013 0v5M17 11V8.5a1.5 1.5 0 013 0V15a6 6 0 01-6 6h-2a6 6 0 01-4.7-2.3l-3.1-4a1.6 1.6 0 012.5-2L8 14.5"/></svg>
     </button>
   </div>
 </div>
@@ -132,23 +165,26 @@
 <section class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" tabindex="-1" hidden>
   <div class="panel-bar">
     <div class="panel-grab" data-grab aria-hidden="true"><span></span></div>
-    <h2 class="panel-title" id="panel-title"></h2>
+    <div class="panel-heading">
+      <p class="panel-kind" id="panel-kind"></p>
+      <h2 class="panel-title" id="panel-title"></h2>
+    </div>
     <button type="button" class="close" data-close aria-label="Close and keep driving">
-      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
     </button>
   </div>
   <div class="panel-scroll" id="panel-body"></div>
 </section>
 
 <section class="mapdlg" id="map" role="dialog" aria-modal="true" aria-labelledby="map-title" tabindex="-1" hidden>
-  <div class="mapdlg-head">
-    <h2 id="map-title">Map of Mattsville</h2>
+  <div class="dlg-head">
+    <h2 class="dlg-title" id="map-title">Map of Mattsville</h2>
     <button type="button" class="close" data-close aria-label="Close the map">
-      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
     </button>
   </div>
   <div class="mapdlg-body">
-    <canvas class="mapdlg-canvas" id="map-canvas" aria-hidden="true"></canvas>
+    <div class="mapdlg-paper"><canvas class="mapdlg-canvas" id="map-canvas" aria-hidden="true"></canvas></div>
     <div class="mapdlg-side">
       <p class="mapdlg-hint" id="map-hint">Pick a place and you’ll be parked outside it, facing the door.</p>
       <ul class="mapdlg-list" id="map-list" aria-describedby="map-hint"></ul>
@@ -156,36 +192,69 @@
   </div>
 </section>
 
+<section class="pause" id="pause" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabindex="-1" hidden>
+  <h2 class="pause-title" id="pause-title">Paused</h2>
+  <div class="pause-actions">
+    <button type="button" class="btn btn-yellow btn-wide" data-close>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>Resume
+    </button>
+    <button type="button" class="btn btn-cream btn-wide" id="pause-map">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5l5.5-2.5 7 3 5.5-2.5v13l-5.5 2.5-7-3L3 19.5z"/><path d="M8.5 4v13M15.5 7v13"/></svg>Map
+    </button>
+    <button type="button" class="btn btn-cream btn-wide" id="pause-controls">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="19" height="11" rx="3.5"/><path d="M7 10.5v3M5.5 12h3"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg>Controls
+    </button>
+  </div>
+  <div class="pause-sound" role="group" aria-labelledby="pause-sound-label">
+    <p class="pause-sound-label" id="pause-sound-label">Sound</p>
+    <button type="button" class="switchrow" role="switch" aria-checked="true" data-setting="effects">
+      <span class="switchrow-text"><span class="switchrow-name">Effects</span><span class="switchrow-hint">Engine, horn, bumps</span></span>
+      <span class="switch" aria-hidden="true"></span>
+    </button>
+    <button type="button" class="switchrow" role="switch" aria-checked="false" data-setting="music">
+      <span class="switchrow-text"><span class="switchrow-name">Music</span><span class="switchrow-hint">A short, quiet loop</span></span>
+      <span class="switch" aria-hidden="true"></span>
+    </button>
+  </div>
+  <a class="pause-exit" href="/">
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3M7 4L3 8l4 4"/></svg>
+    Back to mattpbaker.dev
+  </a>
+</section>
+
 <section class="howto" id="howto" role="dialog" aria-modal="true" aria-labelledby="howto-title" aria-describedby="howto-lead" tabindex="-1" hidden>
-  <h2 id="howto-title">How to play</h2>
-  <p class="howto-lead" id="howto-lead">Drive into the amber ring outside a building, then look inside.</p>
-  <dl class="howto-keys" data-for="keys">
-    <div><dt>Drive</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span class="or">or arrows</span></dd></div>
-    <div><dt>Brake</dt><dd><kbd class="wide">Space</kbd></dd></div>
-    <div><dt>Look inside</dt><dd><kbd>E</kbd></dd></div>
-    <div><dt>Map and fast travel</dt><dd><kbd>M</kbd></dd></div>
-    <div><dt>Horn</dt><dd><kbd>H</kbd></dd></div>
-    <div><dt>Back on the road</dt><dd><kbd>R</kbd></dd></div>
-  </dl>
-  <dl class="howto-keys" data-for="touch">
-    <div><dt>Drive</dt><dd>Drag the stick, bottom left</dd></div>
-    <div><dt>Look inside</dt><dd>The amber button lights up near a building</dd></div>
-    <div><dt>Horn</dt><dd>The small button beside it</dd></div>
-    <div><dt>Map and fast travel</dt><dd>Map, in the top bar</dd></div>
-  </dl>
-  <button type="button" class="pill pill-amber howto-go" data-close>
-    Let’s drive
-    <span class="disc" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
-  </button>
-  <p class="howto-any" data-for="keys">Or press any key</p>
+  <div class="dlg-head">
+    <h2 class="dlg-title" id="howto-title">How to play</h2>
+  </div>
+  <div class="howto-body">
+    <p class="howto-lead" id="howto-lead">Drive into the amber ring outside a building, then look inside.</p>
+    <dl class="howto-keys" data-for="keys">
+      <div><dt>Drive</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span class="or">or arrows</span></dd></div>
+      <div><dt>Brake</dt><dd><kbd class="wide">Space</kbd></dd></div>
+      <div><dt>Look inside</dt><dd><kbd>E</kbd></dd></div>
+      <div><dt>Map and fast travel</dt><dd><kbd>M</kbd></dd></div>
+      <div><dt>Horn</dt><dd><kbd>H</kbd></dd></div>
+      <div><dt>Back on the road</dt><dd><kbd>R</kbd></dd></div>
+      <div><dt>Pause</dt><dd><kbd class="wide">Esc</kbd><span class="or">or</span><kbd>P</kbd></dd></div>
+    </dl>
+    <dl class="howto-keys" data-for="touch">
+      <div><dt>Drive</dt><dd>Drag the stick, bottom left</dd></div>
+      <div><dt>Look inside</dt><dd>The yellow hand button lights up near a building</dd></div>
+      <div><dt>Horn</dt><dd>The small button beside it</dd></div>
+      <div><dt>Map and fast travel</dt><dd>The map button, top right</dd></div>
+      <div><dt>Pause</dt><dd>The pause button, top right</dd></div>
+    </dl>
+    <button type="button" class="btn btn-yellow btn-wide howto-go" data-close>Let’s drive</button>
+    <p class="howto-any" data-for="keys">Or press any key</p>
+  </div>
 </section>
 
 <noscript>
   <div class="loader is-fallback">
     <main class="loader-card">
-      <p class="wordmark">Matt Baker</p>
-      <p class="loader-intro">Mattsville needs JavaScript to run. The normal site has everything in it.</p>
-      <a class="pill pill-amber" href="/">Go to mattpbaker.dev</a>
+      <p class="logo"><span class="logo-word">Mattsville</span></p>
+      <p class="fallback-text">Mattsville needs JavaScript to run. The normal site has everything in it.</p>
+      <a class="btn btn-yellow" href="/">Go to mattpbaker.dev</a>
     </main>
   </div>
 </noscript>
