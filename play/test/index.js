@@ -15,3 +15,6 @@ import './bootfail.test.mjs';
 import './sheet.test.mjs';
 import './camrig.test.mjs';
 import './rim.test.mjs';
+import './speedo.test.mjs';
+import './arrival.test.mjs';
+import './objectives.test.mjs';
