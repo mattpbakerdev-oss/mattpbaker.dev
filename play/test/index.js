@@ -21,3 +21,4 @@ import './objectives.test.mjs';
 import './titlecam.test.mjs';
 import './promptgate.test.mjs';
 import './breakaway.test.mjs';
+import './breakaway-fuzz.test.mjs';

@@ -1,18 +1,21 @@
-// Breakaway lamp posts and in-town trees: drive into one and it topples or flies. The maths is
-// in breakaway.js; this file hit-tests the car, moves the instances that draw each object, dims
-// a knocked lamp's head, and puts everything back out of view 20 seconds later.
+// Breakaway lamp posts and in-town trees: drive into one and it topples or flies. The maths
+// (hit filter, launch, kick-again, keeping clear of the car and buildings, reset rule) is in
+// breakaway.js; this file runs it each frame, moves the instances that draw each object, dims a
+// knocked lamp's head, and puts everything back out of view 20 seconds later.
 //
-// Fires on `events`: smash { kind, strength, mode }.
+// Fires on `events`: smash { kind, strength, mode } (mode 'topple', 'launch' or 'kick').
 import * as THREE from 'three';
-import { createBreakable, strike, stepBreakable, speedAfterHit, canRestore, restoreBreakable, touchesCar } from './breakaway.js';
-import { circleVsCircle, circleVsBox, clampToPlot, plotDistance } from './physics.js';
-import { pointInside } from './occlusion.js';
+import {
+  createBreakable, strike, stepBreakable, speedAfterHit, canRestore, restoreBreakable, touchesCar,
+  headingInto, debrisInWay, rekick, clearOfCar, worldEnv,
+} from './breakaway.js';
 
-const CAR_R = 1.35;
 const MIN_SPEED = 0.2;       // slower than this, the car is resting against it, not hitting it
 const TELEPORT = 5;          // a car that moved further than this in a frame was reset or travelled
 const FLICKER = 0.36;        // seconds a knocked lamp flickers before it goes out
-const LIT = new THREE.Color('#ffffff'), DIM = new THREE.Color('#4a4038');
+const KICK_SOUND_GAP = 0.3;  // seconds between kick sounds from one body
+// The dead head is cool grey, so it reads as unlit glass rather than a dirty bulb.
+const LIT = new THREE.Color('#ffffff'), DIM = new THREE.Color('#77808a');
 
 const P = new THREE.Matrix4(), OUT = new THREE.Matrix4(), T = new THREE.Matrix4();
 const POS = new THREE.Vector3(), QUAT = new THREE.Quaternion(), ONE = new THREE.Vector3(1, 1, 1);
@@ -38,31 +41,14 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
     return b;
   });
 
-  // Keeping flying things out of buildings and inside the plot, without allocating per frame.
-  const solid = world.colliders;
-  const solidAt = (x, z) => {
-    if (plotDistance(x, z, world.plotHalf, world.plotCorner) > 0) return true;
-    for (const c of solid) if (c.kind !== 'extra-sign' && pointInside(x, z, c)) return true;
-    return false;
-  };
-  const push = (x, z, r) => {
-    for (const c of solid) {
-      const reach = r + (c.type === 'circle' ? c.r : Math.hypot(c.hw, c.hd));
-      if (Math.abs(x - c.x) > reach || Math.abs(z - c.z) > reach) continue;
-      const hit = c.type === 'circle' ? circleVsCircle(x, z, r, c.x, c.z, c.r) : circleVsBox(x, z, r, c);
-      if (hit) return { x: x + hit.nx * hit.depth, z: z + hit.nz * hit.depth, nx: hit.nx, nz: hit.nz };
-    }
-    if (plotDistance(x, z, world.plotHalf, world.plotCorner) <= -r) return null;
-    const edge = clampToPlot(x, z, r, world.plotHalf, world.plotCorner);
-    return edge.hit ? edge : null;
-  };
-  const env = { groundAt: world.groundHeightAt, solidAt, push };
+  // Real buildings catch a falling top and push bodies out; the plot edge keeps them in.
+  const env = worldEnv(world);
 
   const moving = new Set();     // knocked bodies whose pose changes (flying, falling, flickering)
   const knocked = new Set();    // every body away from home
   const dirtyMeshes = new Set();
   const prev = { x: car.x, z: car.z };
-  const carNow = { x: 0, z: 0, y: 0 };
+  const carNow = { x: 0, z: 0, y: 0, vx: 0, vz: 0, heading: 0 };
   let clock = 0;
 
   const frustum = new THREE.Frustum(), sphere = new THREE.Sphere(), M = new THREE.Matrix4();
@@ -90,13 +76,26 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
     if (b.occluder) b.occluder.off = true;
     const speed = Math.hypot(car.vx, car.vz);
     const dx = car.vx / speed, dz = car.vz / speed;
-    const { mode } = strike(b, car, clock, { reduced: reducedMotion });
-    const after = speedAfterHit(b.kind, car.vx, car.vz);
+    const { mode } = strike(b, carNow, clock, { reduced: reducedMotion });
+    const after = speedAfterHit(b.kind, car.vx, car.vz, mode);
     car.vx = after.vx; car.vz = after.vz;
-    chase.nudge(Math.min(speed, 20) * (b.kind === 'tree' ? 0.55 : 0.3), -dx, -dz); // none under reduced motion
+    // The view lurches towards the car's travel with the knock (none under reduced motion).
+    chase.nudge(Math.min(speed, 20) * (b.kind === 'tree' ? 0.55 : 0.3), dx, dz);
     if (b.kind === 'lamp' && reducedMotion) setLight(b, false);
     knocked.add(b); moving.add(b);
     emit('smash', { kind: b.kind, strength: speed, mode });
+  }
+
+  /** The car drove into one already knocked: send it on again rather than through the car. */
+  function kick(b) {
+    const speed = Math.hypot(car.vx, car.vz);
+    rekick(b, carNow, clock, { reduced: reducedMotion });
+    car.vx *= 0.95; car.vz *= 0.95;
+    moving.add(b);
+    if (!(clock - (b.kickSound ?? -Infinity) < KICK_SOUND_GAP)) {
+      b.kickSound = clock;
+      emit('smash', { kind: b.kind, strength: speed * 0.5, mode: 'kick' });
+    }
   }
 
   return {
@@ -105,17 +104,24 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
     update(dt, paused) {
       if (paused) { prev.x = car.x; prev.z = car.z; return; }
       clock += dt;
-      carNow.x = car.x; carNow.z = car.z; carNow.y = car.y;
+      Object.assign(carNow, { x: car.x, z: car.z, y: car.y, vx: car.vx, vz: car.vz, heading: car.heading });
       if (Math.hypot(car.x - prev.x, car.z - prev.z) > TELEPORT) { prev.x = car.x; prev.z = car.z; }
       const speed = Math.hypot(car.vx, car.vz);
       if (speed > MIN_SPEED) {
         const minX = Math.min(prev.x, car.x) - 3, maxX = Math.max(prev.x, car.x) + 3;
         const minZ = Math.min(prev.z, car.z) - 3, maxZ = Math.max(prev.z, car.z) + 3;
         for (const b of bodies) {
-          if (b.home.x < minX || b.home.x > maxX || b.home.z < minZ || b.home.z > maxZ) continue;
+          if (b.mode !== 'standing' || b.home.x < minX || b.home.x > maxX || b.home.z < minZ || b.home.z > maxZ) continue;
           // Only when the car is heading into it, so pulling away from one never knocks it.
-          if ((b.home.x - car.x) * car.vx + (b.home.z - car.z) * car.vz <= 0 && Math.hypot(b.home.x - car.x, b.home.z - car.z) > CAR_R) continue;
-          if (touchesCar(b, carNow, prev, CAR_R)) hit(b);
+          if (headingInto(b, carNow, prev) && touchesCar(b, carNow, prev)) {
+            hit(b);
+            carNow.vx = car.vx; carNow.vz = car.vz;
+          }
+        }
+        // Driving into one already down (or catching one it knocked): kick it on again.
+        for (const b of knocked) {
+          if (b.knockedAt === clock || Math.abs(b.x - car.x) > 8 || Math.abs(b.z - car.z) > 8) continue;
+          if (debrisInWay(b, carNow)) { kick(b); carNow.vx = car.vx; carNow.vz = car.vz; }
         }
       }
       prev.x = car.x; prev.z = car.z;
@@ -127,6 +133,13 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
           if (t >= FLICKER || reducedMotion) { b.lightOff = true; setLight(b, false); }
           else setLight(b, Math.floor(t / 0.06) % 3 !== 1);
         }
+      }
+      // Never drawn inside the car: anything knocked that it is sitting in gets slid on ahead.
+      for (const b of knocked) {
+        if (Math.abs(b.x - car.x) > 8 || Math.abs(b.z - car.z) > 8) continue;
+        if (clearOfCar(b, carNow, env)) moving.add(b);
+      }
+      for (const b of moving) {
         draw(b);
         if (b.mode === 'down' && (b.kind !== 'lamp' || b.lightOff)) moving.delete(b);
       }
