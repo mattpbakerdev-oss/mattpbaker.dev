@@ -2,7 +2,8 @@
 // down to the chase position on Start. Pure maths, no three.js, so node can test it.
 import { PLAZA } from './layout.js';
 
-export const ORBIT = { radius: 52, height: 30, speed: 0.05, start: 2.2, lookY: 3 };
+// Low and level enough that the top of the frame is blue sky rather than the hazy horizon.
+export const ORBIT = { radius: 52, height: 22, speed: 0.05, start: 2.2, lookY: 8 };
 export const SWOOP_SECONDS = 1.4;
 
 /** Camera position and look-at point `t` seconds into the orbit (held still if `still`). */

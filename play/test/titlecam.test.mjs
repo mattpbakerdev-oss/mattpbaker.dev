@@ -24,3 +24,9 @@ test('the swoop eases from 0 to 1 and stays put after', () => {
   assert.equal(swoopBlend(5), 1);
   assert.ok(swoopBlend(0.1, 1.4) < 0.1, 'starts gently');
 });
+
+test('the orbit looks only gently down, so the top of the frame is blue sky, not hazy horizon', () => {
+  assert.deepEqual(ORBIT, { radius: 52, height: 22, speed: 0.05, start: 2.2, lookY: 8 });
+  const pitch = Math.atan2(ORBIT.height - ORBIT.lookY, ORBIT.radius) * 180 / Math.PI;
+  assert.ok(pitch < 17, `pitch ${pitch.toFixed(1)}deg`);
+});

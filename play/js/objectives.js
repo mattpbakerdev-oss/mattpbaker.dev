@@ -15,3 +15,8 @@ export function objectiveProgress(visited) {
   const done = items.filter((i) => i.done).length;
   return { items, done, total: items.length, complete: done === items.length };
 }
+
+/** The optional fifth row: the collectibles. Not part of the four stops or their count. */
+export function extrasRow(found, total) {
+  return { label: 'Find the hidden extras', count: `${found}/${total}`, done: total > 0 && found >= total };
+}

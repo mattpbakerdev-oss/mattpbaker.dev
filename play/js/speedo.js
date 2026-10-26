@@ -26,3 +26,22 @@ export function easeToward(current, target, dt, rate = 7, snap = 0.05) {
   const next = current + (target - current) * (1 - Math.exp(-rate * dt));
   return Math.abs(target - next) < snap ? target : next;
 }
+
+/**
+ * Tracks what the speedometer last showed and reports only what changed: the needle angle
+ * rounded to half a degree, and the whole-number mph. A field is null when it needs no write.
+ * Returns the same object every call, so the render loop allocates nothing.
+ */
+export function createReadout() {
+  let lastAngle = NaN, lastNum = NaN;
+  const out = { angle: null, num: null };
+  return {
+    step(mph) {
+      const angle = Math.round(needleAngle(mph) * 2) / 2;
+      const num = Math.round(mph);
+      out.angle = angle === lastAngle ? null : (lastAngle = angle);
+      out.num = num === lastNum ? null : (lastNum = num);
+      return out;
+    },
+  };
+}

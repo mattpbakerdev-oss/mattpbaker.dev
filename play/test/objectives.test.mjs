@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLACES } from '../js/places.js';
-import { OBJECTIVES, objectiveProgress } from '../js/objectives.js';
+import { OBJECTIVES, objectiveProgress, extrasRow } from '../js/objectives.js';
 
 test('the to-do list has the four stops, in order, with the brief\'s exact wording', () => {
   assert.deepEqual(OBJECTIVES.map((o) => o.label), [
@@ -32,4 +32,10 @@ test('all four visited is complete', () => {
 
 test('accepts any iterable of ids', () => {
   assert.equal(objectiveProgress(['up-lock']).done, 1);
+});
+
+test('the hidden extras sit on the list as an optional fifth row, outside the four stops', () => {
+  assert.deepEqual(extrasRow(0, 4), { label: 'Find the hidden extras', count: '0/4', done: false });
+  assert.deepEqual(extrasRow(4, 4), { label: 'Find the hidden extras', count: '4/4', done: true });
+  assert.equal(objectiveProgress(new Set()).total, 4, 'the to-do count stays the four visits');
 });
