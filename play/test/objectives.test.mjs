@@ -35,7 +35,7 @@ test('accepts any iterable of ids', () => {
 });
 
 test('the hidden extras sit on the list as an optional fifth row, outside the four stops', () => {
-  assert.deepEqual(extrasRow(0, 4), { label: 'Find the hidden extras', count: '0/4', done: false });
-  assert.deepEqual(extrasRow(4, 4), { label: 'Find the hidden extras', count: '4/4', done: true });
+  assert.deepEqual(extrasRow(0, 4), { label: 'Find the hidden extras', short: 'Hidden extras', count: '0/4', done: false });
+  assert.deepEqual(extrasRow(4, 4), { label: 'Find the hidden extras', short: 'Hidden extras', count: '4/4', done: true });
   assert.equal(objectiveProgress(new Set()).total, 4, 'the to-do count stays the four visits');
 });

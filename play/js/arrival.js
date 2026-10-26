@@ -30,18 +30,19 @@ export function createArrivals(places) {
   let current = null;   // zone the car is in
   let shownKey = null;  // key of the banner already used on this approach
 
-  // Offset from the car to the nearest point of the zone.
-  const offset = (zone, x, z) => [
-    Math.min(zone.x1, Math.max(zone.x0, x)) - x,
-    Math.min(zone.z1, Math.max(zone.z0, z)) - z,
-  ];
-  const dist = (zone, x, z) => Math.hypot(...offset(zone, x, z));
-  const ahead = (zone, x, z, heading) => {
+  // Distance from the car to the nearest point of the zone. The offset lands in ox, oz rather
+  // than a fresh array: this runs per zone per frame.
+  let ox = 0, oz = 0;
+  const measure = (zone, x, z) => {
+    ox = Math.min(zone.x1, Math.max(zone.x0, x)) - x;
+    oz = Math.min(zone.z1, Math.max(zone.z0, z)) - z;
+    return Math.hypot(ox, oz);
+  };
+  // Reads the offset left by the `measure` call just before it.
+  const ahead = (d, heading) => {
     if (!Number.isFinite(heading)) return true;
-    const [dx, dz] = offset(zone, x, z);
-    const d = Math.hypot(dx, dz);
     if (d <= NEAR_RADIUS) return true;
-    return (Math.sin(heading) * dx + Math.cos(heading) * dz) / d > AHEAD_DOT;
+    return (Math.sin(heading) * ox + Math.cos(heading) * oz) / d > AHEAD_DOT;
   };
 
   return {
@@ -51,12 +52,12 @@ export function createArrivals(places) {
      * approach still counts as used.
      */
     update(x, z, { blocked = false, heading } = {}) {
-      if (current && dist(current, x, z) > LEAVE_RADIUS) current = null;
+      if (current && measure(current, x, z) > LEAVE_RADIUS) current = null;
       if (!current) {
         let best = null, bestD = ARRIVE_RADIUS;
         for (const zone of zones) {
-          const d = dist(zone, x, z);
-          if (d <= bestD && ahead(zone, x, z, heading)) { best = zone; bestD = d; }
+          const d = measure(zone, x, z);
+          if (d <= bestD && ahead(d, heading)) { best = zone; bestD = d; }
         }
         current = best;
       }

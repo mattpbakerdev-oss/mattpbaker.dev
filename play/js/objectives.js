@@ -18,5 +18,5 @@ export function objectiveProgress(visited) {
 
 /** The optional fifth row: the collectibles. Not part of the four stops or their count. */
 export function extrasRow(found, total) {
-  return { label: 'Find the hidden extras', count: `${found}/${total}`, done: total > 0 && found >= total };
+  return { label: 'Find the hidden extras', short: 'Hidden extras', count: `${found}/${total}`, done: total > 0 && found >= total };
 }

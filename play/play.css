@@ -250,6 +250,7 @@ kbd.wide { min-width: 62px; }
 .todo-extra.is-done .todo-box { border-style: solid; background: var(--green); }
 .todo-extra.is-done .todo-box svg { fill: none; }
 .todo-extra.is-done .todo-label { text-decoration: none; }
+.todo-label-short { display: none; }
 .todo-extra-count {
   margin-left: auto; padding: 2px 7px; border: 2px dashed rgba(30,20,36,0.45); border-radius: 999px;
   font: 400 13px/1 var(--display); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
@@ -323,7 +324,8 @@ kbd.wide { min-width: 62px; }
   display: grid; place-items: center; border: var(--line); background: var(--yellow);
   font: 400 15px/1 var(--display); transform: rotate(-6deg);
 }
-@media (min-width: 900px) and (hover: hover) and (pointer: fine) { .minimap { display: block; } }
+/* Not on short windows: the compact speed badge sits there. Matches MQ_MINIMAP in ui.js. */
+@media (min-width: 900px) and (min-height: 501px) and (hover: hover) and (pointer: fine) { .minimap { display: block; } }
 
 /* Back to site pill, bottom left (desktop) */
 .backpill {
@@ -360,7 +362,7 @@ kbd.wide { min-width: 62px; }
   background: var(--yellow); white-space: nowrap;
 }
 .speedo-num { font: 400 24px/1 var(--display); font-variant-numeric: tabular-nums; }
-.speedo-unit { font: 400 12px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; }
+.speedo-unit { font: 400 14px/1 var(--display); letter-spacing: 0.04em; text-transform: uppercase; }
 /* Touch: a compact badge under the round buttons, top right, clear of the stick, the buttons
    and the banner slot in the middle. */
 .is-touch .speedo {
@@ -400,22 +402,27 @@ kbd.wide { min-width: 62px; }
 }
 
 /* ---------- Interact prompt ---------- */
+/* Everywhere: the top slot the arrival banner uses, so it never sits over the car. It waits
+   for the banner to go, then takes the same place. Desktop: one row. */
 .prompt {
   --sh-current: 5px 5px 0 var(--ink);
-  position: fixed; z-index: 15; left: 50%; bottom: max(14px, var(--safe-b));
+  position: fixed; z-index: 15; left: 50%; top: calc(var(--safe-t) + 14px); bottom: auto;
   display: grid; grid-auto-flow: column; align-items: center; gap: 16px; padding: 9px 20px 10px; translate: -50% 0;
   border: var(--line); border-radius: 18px; background: var(--yellow); color: var(--ink);
   box-shadow: 5px 5px 0 var(--ink); cursor: pointer; white-space: nowrap;
-  rotate: -2deg; opacity: 0; scale: 0.6;
+  rotate: -2deg; opacity: 0; scale: 0.85;
   transition: scale .16s var(--ease-out), opacity .12s linear, box-shadow .12s var(--ease-out), translate .12s var(--ease-out);
 }
+.prompt:not(.is-shown) { pointer-events: none; }
 .prompt.is-shown { opacity: 1; scale: 1; transition: scale .3s var(--spring), opacity .1s linear, box-shadow .12s var(--ease-out), translate .12s var(--ease-out); }
 .prompt:active { translate: calc(-50% + 2px) 2px; box-shadow: var(--sh-press); }
 .prompt-place { font: 400 26px/1 var(--display); letter-spacing: 0.02em; }
 .prompt-act { display: flex; align-items: center; gap: 7px; font: 500 15px/1 var(--sans); }
 .prompt kbd { min-width: 30px; height: 30px; }
-.is-touch .prompt {
-  bottom: calc(max(24px, var(--safe-b) + 16px) + 160px); grid-auto-flow: row; justify-items: center; gap: 6px; padding: 10px 20px 12px;
+/* Narrower desktops: a slimmer row, so the longest name clears the open to-do card on the left. */
+@media (max-width: 1199px) {
+  .prompt { gap: 12px; padding: 8px 16px 9px; }
+  .prompt-place { font-size: 23px; }
 }
 
 /* ---------- Toasts ---------- */
@@ -535,7 +542,7 @@ kbd.wide { min-width: 62px; }
 .panel-heading { min-width: 0; padding-top: 2px; }
 .panel-kind {
   display: inline-block; margin: 0 0 8px; padding: 4px 9px 3px; border: 2.5px solid var(--ink); border-radius: 8px;
-  background: var(--cream); font: 400 13px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--cream); font: 400 14px/1 var(--display); letter-spacing: 0.04em; text-transform: uppercase;
 }
 .panel[data-kind="project"] .panel-kind { background: var(--sky); }
 .panel[data-kind="about"] .panel-kind { background: var(--cream); }
@@ -780,6 +787,13 @@ kbd.wide { min-width: 62px; }
   :root { --slot-top: calc(max(8px, var(--safe-t)) + 4px); }
   .banner { width: min(400px, calc(100vw - 420px)); }
   .toasts { width: min(340px, calc(100vw - 480px)); }
+  /* Title only, so a toast stays a strip and the place ahead stays in view; the line is still
+     read out by the live region. */
+  .toast { width: auto; max-width: 100%; padding: 5px 14px 5px 6px; column-gap: 9px; }
+  .toast-icon { grid-row: auto; width: 30px; height: 30px; }
+  .toast-icon svg { width: 15px; height: 15px; }
+  .toast strong { font-size: 17px; }
+  .toast:has(strong) .toast-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* Short screens: a smaller stick and a tighter to-do, so the open card clears the stick. */
   .stick { width: 112px; height: 112px; }
   .stick::before { inset: 20px; }
@@ -803,6 +817,12 @@ kbd.wide { min-width: 62px; }
   .touch-buttons { gap: 10px; }
   .hud-right { gap: 6px; }
   .todo-head { gap: 6px; padding-left: 9px; }
+  .todo-label-long { display: none; }
+  .todo-label-short { display: inline; }
+  /* The count drops under the label, lined up with it, so the label keeps one line. */
+  .todo-extra { flex-wrap: wrap; row-gap: 4px; }
+  .todo-extra .todo-label { flex: 1 1 calc(100% - 34px); }
+  .todo-extra-count { margin-left: 34px; }
 }
 
 /* ---------- Phones (portrait): bottom sheets ---------- */
@@ -878,3 +898,9 @@ kbd.wide { min-width: 62px; }
   box-shadow: 0 0 0 3px var(--yellow), var(--sh-current, 0 0 #0000);
 }
 .gallery:focus-visible { outline-offset: -3px; box-shadow: inset 0 0 0 6px var(--yellow); border-radius: 16px; }
+/* The prompt is yellow, so the yellow ring would vanish into it: an ink ring inside the card
+   and a yellow ring outside it, over the hard shadow. */
+.prompt:focus-visible {
+  outline: 3px solid var(--ink); outline-offset: -9px;
+  box-shadow: 0 0 0 4px var(--yellow), 0 0 0 7px var(--ink), var(--sh-current);
+}

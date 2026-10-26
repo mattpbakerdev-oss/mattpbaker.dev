@@ -19,3 +19,4 @@ import './speedo.test.mjs';
 import './arrival.test.mjs';
 import './objectives.test.mjs';
 import './titlecam.test.mjs';
+import './promptgate.test.mjs';

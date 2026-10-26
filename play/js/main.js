@@ -125,6 +125,8 @@ async function boot() {
   car.onBump = (strength, nx, nz) => { chase.nudge(strength, nx, nz); emit('bump', { strength }); };
   car.onLand = (impact) => emit('land', { impact });
   const ui = createUI({ car, chase, world, input, events, canvas, reducedMotion });
+  // Fast travel snaps the chase camera; a title swoop still blending would drag it back.
+  events.addEventListener('travel', () => { swoop = null; });
   markers.update(0, null, ui.visited, camera);
   const extras = createExtras({ scene, camera, world, car, events, ui, reducedMotion });
   const audio = createAudio({ events, car, ui });
@@ -148,7 +150,7 @@ async function boot() {
     const dt = Math.min((now - last) / 1000, MAX_DT);
     last = now;
     const edges = input.update();
-    if (edges.reset) { car.reset(); chase.snap(); emit('reset'); }
+    if (edges.reset) { car.reset(); chase.snap(); swoop = null; emit('reset'); }
     for (const name of ['interact', 'horn', 'map']) if (edges[name]) emit(name);
 
     const steps = Math.ceil(dt / STEP);

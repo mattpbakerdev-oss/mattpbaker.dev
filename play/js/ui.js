@@ -14,6 +14,7 @@ import { shouldDismiss } from './sheet.js';
 import { toMph, needleAngle, easeToward, createReadout, DIAL_MAX_MPH } from './speedo.js';
 import { createArrivals } from './arrival.js';
 import { objectiveProgress, extrasRow } from './objectives.js';
+import { createPromptGate } from './promptgate.js';
 
 const $ = (id) => document.getElementById(id);
 const FOCUSABLE = 'a[href], button:not([disabled]), video[controls], iframe, [tabindex]:not([tabindex="-1"])';
@@ -46,9 +47,9 @@ const ICON = {
 const isExternal = (href) => /^https?:\/\//.test(href);
 const KIND_LABEL = { project: 'Project', about: 'About me', contact: 'Get in touch', soon: 'Coming soon' };
 const BANNER_HOLD = 2500;
-// Layouts, kept in step with play.css. Compact: phones either way up (and any short window).
-const MQ_COMPACT = '(max-width: 719px), (max-height: 500px)';
-const MQ_MINIMAP = '(min-width: 900px) and (hover: hover) and (pointer: fine)';
+// Layouts, kept in step with play.css. The minimap is off on short windows, where the compact
+// speed badge sits in its spot.
+const MQ_MINIMAP = '(min-width: 900px) and (min-height: 501px) and (hover: hover) and (pointer: fine)';
 // The to-do starts as a chip on any touch device and on compact screens.
 const MQ_TODO_CHIP = '(pointer: coarse), (max-width: 719px), (max-height: 500px)';
 const TODO_PEEK = 3000;
@@ -57,7 +58,6 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
   const emit = (type, detail) => events.dispatchEvent(new CustomEvent(type, { detail }));
   const coarse = matchMedia('(pointer: coarse)');
   const isTouch = () => coarse.matches;
-  const compact = matchMedia(MQ_COMPACT);
 
   const hud = $('hud'), minimap = $('minimap'), minimapFrame = $('minimap-frame'), prompt = $('prompt'), touchEl = $('touch');
   const speedo = $('speedo'), backpill = $('backpill'), banner = $('banner'), pauseEl = $('pause');
@@ -80,8 +80,6 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
   let openPlace = null;
   let lastFocus = null;
   let openedAt = 0;
-  let promptTimer = null;
-  let promptFor = null;   // the place the prompt is showing (null while it is hidden or leaving)
 
   createTouchControls(touchEl, input);
 
@@ -91,6 +89,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     car.frozen = paused;
     document.body.classList.toggle('is-paused', paused);
     for (const el of outside) el.inert = paused;
+    if (!paused && !promptGate.place) prompt.inert = true; // a leaving prompt stays untouchable
   }
 
   function openDialog(el, { focus, onClose, scrimClass = '' } = {}) {
@@ -464,26 +463,28 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     announcer.textContent = '';
     requestAnimationFrame(() => { announcer.textContent = text; });
   }
-  function setPrompt(place) {
-    clearTimeout(promptTimer);
-    if (!place) {
-      if (!promptFor) return;
-      promptFor = null;
+  // The prompt goes inert and leaves the accessibility tree the moment it starts to hide, so a
+  // fading prompt can never be tapped; it leaves the layout once the exit has played.
+  const promptGate = createPromptGate({
+    delay: reducedMotion ? 0 : 160,
+    show(place, fromHidden) {
+      $('prompt-place').textContent = place.title;
+      $('prompt-act').innerHTML = isTouch() ? 'Tap to look inside' : 'Press <kbd>E</kbd> to look inside';
+      prompt.inert = Boolean(open);
+      prompt.removeAttribute('aria-hidden');
+      prompt.hidden = false;
+      if (fromHidden) void prompt.offsetWidth;
+      prompt.classList.add('is-shown');
+      if (fromHidden) placeToasts();
+    },
+    leave() {
       prompt.classList.remove('is-shown');
-      // Let the exit transition play, then take it out of the tab order.
-      if (reducedMotion) { prompt.hidden = true; placeToasts(); }
-      else promptTimer = setTimeout(() => { prompt.hidden = true; placeToasts(); }, 160);
-      return;
-    }
-    $('prompt-place').textContent = place.title;
-    $('prompt-act').innerHTML = isTouch() ? 'Tap to look inside' : 'Press <kbd>E</kbd> to look inside';
-    const wasHidden = prompt.hidden;
-    promptFor = place;
-    prompt.hidden = false;
-    if (wasHidden) void prompt.offsetWidth;
-    prompt.classList.add('is-shown');
-    if (wasHidden) placeToasts();
-  }
+      prompt.inert = true;
+      prompt.setAttribute('aria-hidden', 'true');
+    },
+    gone() { prompt.hidden = true; placeToasts(); },
+  });
+  const setPrompt = (place) => promptGate.set(place);
 
   /**
    * Toasts sit under whatever is in the top slot: the arrival banner, or the prompt where it lives
@@ -493,12 +494,12 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     let below = 0;
     const inTop = (el) => !el.hidden && el.offsetHeight && el.offsetTop < innerHeight / 2;
     if (bannerUp && inTop(banner)) below = banner.offsetTop + banner.offsetHeight;
-    else if (promptFor && inTop(prompt)) below = prompt.offsetTop + prompt.offsetHeight;
+    else if (promptGate.place && inTop(prompt)) below = prompt.offsetTop + prompt.offsetHeight;
     const shift = below ? Math.max(0, below + 16 - toasts.offsetTop) : 0; // 16: room for the tilt
     toasts.style.transform = shift ? `translate(-50%, ${shift}px)` : '';
   }
   window.addEventListener('resize', () => { if (started) placeToasts(); });
-  prompt.addEventListener('click', () => { const p = active ?? arrival; if (p) openPanel(p); });
+  prompt.addEventListener('click', () => { const p = promptGate.place && (active ?? arrival); if (p) openPanel(p); });
 
   events.addEventListener('interact', () => {
     const p = active ?? arrival;
@@ -618,7 +619,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     // The collectibles: optional, so they sit apart with their own count, outside the four.
     h('li', { class: `todo-item todo-extra${x.done ? ' is-done' : ''}${foundBumped ? ' is-new' : ''}` },
       h('span', { class: 'todo-box', 'aria-hidden': 'true', html: x.done ? ICON.tick : ICON.star }),
-      h('span', { class: 'todo-label' }, x.label),
+      // The narrowest phones show the short label; only one of the two is ever displayed.
+      h('span', { class: 'todo-label' }, h('span', { class: 'todo-label-long' }, x.label), h('span', { class: 'todo-label-short' }, x.short)),
       h('span', { class: 'todo-extra-count', 'aria-hidden': 'true' }, x.count),
       h('span', { class: 'sr-only' }, `, optional, ${found.n} of ${found.total} found`)));
     foundBumped = false;
@@ -693,6 +695,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
 
   // ---------- Arrival banners ----------
   const arrivals = createArrivals(PLACES);
+  const arrivalOpts = { blocked: false, heading: 0 }; // reused every frame
   let bannerTimer = null, bannerOutTimer = null;
   let bannerUp = false; // in, or still sliding out: the top slot is taken
   const bannerGone = () => { bannerUp = false; banner.classList.remove('is-out'); placeToasts(); };
@@ -704,8 +707,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     banner.classList.add('is-out');
     bannerOutTimer = setTimeout(bannerGone, 450);
   }
-  /** On phones the prompt shares the banner's slot at the top, so it waits for the banner to go. */
-  const holdPrompt = () => bannerUp && compact.matches;
+  /** The prompt shares the banner's slot at the top, so it waits for the banner to go. */
+  const holdPrompt = () => bannerUp;
   function showBanner(place) {
     clearTimeout(bannerTimer); clearTimeout(bannerOutTimer);
     const soon = place.kind === 'soon';
@@ -740,7 +743,9 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     },
     update(dt = 0) {
       if (!started) return;
-      const arrived = arrivals.update(car.x, car.z, { blocked: Boolean(open), heading: car.heading });
+      arrivalOpts.blocked = Boolean(open);
+      arrivalOpts.heading = car.heading;
+      const arrived = arrivals.update(car.x, car.z, arrivalOpts);
       if (arrived) showBanner(arrived);
       if (open) hideBanner(true);
       updateSpeedo(dt);
@@ -756,8 +761,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
         if (entered) announce(`${now.title}. ${isTouch() ? 'Tap the hand button' : 'Press E'} to look inside.`);
       }
       const hold = Boolean(open) || holdPrompt();
-      if (hold && promptFor) setPrompt(null);
-      if (!hold && now && !promptFor) setPrompt(now);
+      if (hold && promptGate.place) setPrompt(null);
+      if (!hold && now && !promptGate.place) setPrompt(now);
       drawMinimap();
     },
     openPanel, openMap, openPause, closeDialog, travel, toast, setFound, setSound, closeSoundMenu,
