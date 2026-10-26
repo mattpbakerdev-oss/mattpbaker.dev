@@ -213,10 +213,10 @@ export function createExtras({ scene, camera, world, car, events, ui, reducedMot
     /** For checks: every placed extra that sits inside a solid collider (should be empty). */
     overlaps() {
       const bad = [];
-      const solid = world.colliders.filter((c) => c.kind !== 'extra-sign');
+      const solid = world.clearance().filter((c) => c.kind !== 'extra-sign'); // breakables at their home spots
       const hits = (x, z, r) => solid.some((c) => (c.type === 'circle' ? Math.hypot(x - c.x, z - c.z) < r + c.r : circleVsBox(x, z, r, c)));
       for (const b of props.bodies) if (hits(b.home.x, b.home.z, 0.4)) bad.push(`prop ${b.kind} ${b.home.x},${b.home.z}`);
-      for (const s of signs) if (world.colliders.some((c) => c.kind !== 'extra-sign' && (c.type === 'circle' ? Math.hypot(s.x - c.x, s.z - c.z) < 0.5 + c.r : circleVsBox(s.x, s.z, 0.5, c)))) bad.push(`sign ${s.text}`);
+      for (const s of signs) if (world.clearance().some((c) => c.kind !== 'extra-sign' && (c.type === 'circle' ? Math.hypot(s.x - c.x, s.z - c.z) < 0.5 + c.r : circleVsBox(s.x, s.z, 0.5, c)))) bad.push(`sign ${s.text}`);
       for (const w of folk.walkers) for (const [x, z] of w.path) if (hits(x, z, 0.4)) bad.push(`walker ${w.line.slice(0, 12)} ${x},${z}`);
       for (const c of loot.items) if (c.y < 2 && hits(c.x, c.z, 1.4)) bad.push(`collectible ${c.id}`);
       return bad;
@@ -280,7 +280,7 @@ function buildSigns(scene, world) {
   const BW = 2.6, BH = 1.04, BY = 1.75, K = 1.25; // K: the whole sign scaled up to read from the road
   const wood = [], faces = [];
   const signs = SIGNS.map((def, i) => {
-    const spot = clearSpot(def.x, def.z, 1.4, world.colliders, def.along[0], def.along[1]);
+    const spot = clearSpot(def.x, def.z, 1.4, world.clearance(), def.along[0], def.along[1]);
     const s = { ...def, x: spot.x, z: spot.z };
     const m = new THREE.Matrix4().compose(new THREE.Vector3(s.x, 0, s.z), new THREE.Quaternion().setFromAxisAngle(UP, s.rot), new THREE.Vector3(K, K, K));
     const parts = [
@@ -410,7 +410,7 @@ function propGeometry(kind) {
 function buildProps(scene, world) {
   const mat = material({ vertexColors: true });
   const bodies = PROPS.map((p) => {
-    const spot = clearSpot(p.x, p.z, p.kind === 'fence' ? 1.1 : PROP_KINDS[p.kind].r, world.colliders, 1, 0, 4);
+    const spot = clearSpot(p.x, p.z, p.kind === 'fence' ? 1.1 : PROP_KINDS[p.kind].r, world.clearance(), 1, 0, 4);
     return createBody(p.kind, spot.x, spot.z, p.rot ?? 0);
   });
   const meshes = {};
@@ -499,7 +499,7 @@ function haloTexture() {
 function buildCollectibles(scene, world, reducedMotion) {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: '#e0a94a', emissiveIntensity: 0.32 });
   const items = COLLECTIBLES.map((c) => {
-    const spot = c.y < 2 ? clearSpot(c.x, c.z, 1.6, world.colliders, 1, 0, 6) : { x: c.x, z: c.z };
+    const spot = c.y < 2 ? clearSpot(c.x, c.z, 1.6, world.clearance(), 1, 0, 6) : { x: c.x, z: c.z };
     const mesh = new THREE.Mesh(collectibleGeometry(c.id), mat);
     mesh.position.set(spot.x, c.y, spot.z);
     mesh.rotation.y = reducedMotion ? Math.PI / 5 : 0;

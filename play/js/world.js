@@ -1,6 +1,8 @@
 // The town: sky, terrain, roads, square, ramps, trees, benches and the rim, built from
 // layout.js and places.js (the buildings themselves come from models.js). Repeated props are instanced and static parts merged to keep draw
 // calls low. Every solid thing registers a collider in `colliders` (see physics.js shapes).
+// Lamp posts and in-plot trees are breakaway (breakaway.js, smash.js): they are not in
+// `colliders` but in `breakables`, footprint circles carrying the instances that draw them.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PLOT_HALF, PLOT_CORNER, ROADS, PLAZA, FOUNTAIN, RAMPS, PARK, START, WELCOME_SIGN, ROAD_WIDTH } from './layout.js';
@@ -8,6 +10,7 @@ import { PLACES, RING_RADIUS, ringCentre, footprintRect } from './places.js';
 import { groundHeight, circleOverlapsRect, rectsOverlap, rampFootprint, plotDistance } from './physics.js';
 import { rimTrees, rimHills } from './rim.js';
 import { TOWNSFOLK } from './walkers.js';
+import { splitColliders, clearanceColliders } from './breakaway.js';
 
 export const COLOURS = {
   skyTop: '#9fd3ff', skyMid: '#cfe8fb', horizon: '#ffd9b0',
@@ -134,13 +137,20 @@ export function buildWorld(scene) {
   buildRamps(scene, vertexMat);
   buildPlaces(scene, colliders);
   const props = [];
-  buildLampPosts(scene, colliders, blocked, props);
+  const lampParts = buildLampPosts(scene, colliders, blocked, props);
   const trees = buildTrees(scene, colliders, rand, blocked, props);
   buildBenches(scene, colliders, props);
   buildRim(scene, rand, vertexMat);
 
+  const { solid, breakable } = splitColliders(colliders);
+  for (const b of breakable) b.parts = b.kind === 'lamp' ? lampParts[b.lamp] : trees[b.tree];
+
   return {
-    colliders,
+    colliders: solid,
+    /** Lamp posts and in-plot trees: footprint circles { kind, x, z, r, rot, s, parts, down }. */
+    breakables: breakable,
+    /** Solid colliders plus every breakable still standing: for placing things clear of them. */
+    clearance: () => clearanceColliders(solid, breakable),
     ramps: RAMPS,
     roads: ROADS,
     places: PLACES,
@@ -391,10 +401,17 @@ function buildLampPosts(scene, colliders, blocked, props) {
   const pole = new THREE.CylinderGeometry(0.12, 0.17, 4.6, 6).translate(0, 2.3, 0);
   const arm = box(0.12, 0.12, 1.2, 0, 4.5, 0.5);
   const geo = mergeGeometries([pole.toNonIndexed().deleteAttribute('uv'), arm.toNonIndexed().deleteAttribute('uv')]);
-  scene.add(instanced(geo, material({ color: '#3d3537' }), spots));
+  const poles = instanced(geo, material({ color: '#3d3537' }), spots);
+  // The head's instance colour dims it when a knocked lamp goes out (smash.js).
   const head = box(0.5, 0.25, 0.7, 0, 4.35, 1.05);
-  scene.add(instanced(head, new THREE.MeshBasicMaterial({ color: '#fff0c6' }), spots, false));
-  for (const s of spots) colliders.push({ type: 'circle', x: s.x, z: s.z, r: 0.35, kind: 'lamp' });
+  const lit = new THREE.Color('#ffffff');
+  const heads = instanced(head, new THREE.MeshBasicMaterial({ color: '#fff0c6' }), spots.map((s) => ({ ...s, color: lit })), false);
+  // Knocked lamps fly anywhere in the plot, so never cull on the stale instance bounds.
+  poles.frustumCulled = heads.frustumCulled = false;
+  poles.name = 'lamps'; heads.name = 'lamp-heads';
+  scene.add(poles, heads);
+  spots.forEach((s, i) => colliders.push({ type: 'circle', x: s.x, z: s.z, r: 0.35, rot: s.rot, kind: 'lamp', lamp: i }));
+  return spots.map((s, i) => [{ mesh: poles, index: i }, { mesh: heads, index: i, light: true }]);
 }
 
 function buildTrees(scene, colliders, rand, blocked, props) {
@@ -412,12 +429,14 @@ function buildTrees(scene, colliders, rand, blocked, props) {
     const pine = rand() < 0.35;
     const canopy = pine ? pines : round;
     links.push({ pine, index: canopy.length });
-    colliders.push({ type: 'circle', x, z, r: 0.45 * s + 0.15, kind: 'tree', tree: trunks.length });
+    colliders.push({ type: 'circle', x, z, r: 0.45 * s + 0.15, s, rot: 0, kind: 'tree', tree: trunks.length });
     trunks.push({ x, z, s, rot: rand() * 6 });
     canopy.push({ x, z, s, rot: rand() * 6, color: (pine ? pineGreens : greens)[Math.floor(rand() * (pine ? 3 : 5))] });
     props.push({ x, z });
   }
   const meshes = addTreeMeshes(scene, trunks, round, pines);
+  // Knocked trees fly anywhere in the plot, so never cull on the stale instance bounds.
+  for (const m of Object.values(meshes)) m.frustumCulled = false;
   return links.map(({ pine, index }, i) => [
     { mesh: meshes.trunk, index: i },
     { mesh: pine ? meshes.pine : meshes.round, index },

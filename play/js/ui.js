@@ -415,7 +415,7 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
     emit('map-open');
   }
   function travel(place) {
-    const spot = travelSpot(place, world.roads, world.colliders);
+    const spot = travelSpot(place, world.roads, world.clearance());
     closeDialog({ restore: false });
     car.place(spot.x, spot.z, spot.heading);
     chase.snap();

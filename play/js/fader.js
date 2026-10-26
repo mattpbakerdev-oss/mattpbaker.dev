@@ -82,6 +82,13 @@ export function createFader(scene, world) {
         for (const m of f.materials) m.opacity = f.opacity;
       }
     },
+    /** Put one faded mesh back at once (a tree about to be knocked flying, smash.js). */
+    release(key) {
+      const f = live.get(key);
+      if (!f) return;
+      f.restore();
+      live.delete(key);
+    },
     /** For checks: the keys currently faded and their opacity. */
     get faded() { return Object.fromEntries([...live].map(([k, f]) => [k, +f.opacity.toFixed(2)])); },
   };
