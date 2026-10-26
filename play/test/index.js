@@ -22,3 +22,6 @@ import './titlecam.test.mjs';
 import './promptgate.test.mjs';
 import './breakaway.test.mjs';
 import './breakaway-fuzz.test.mjs';
+import './spots.test.mjs';
+import './breakaway-feel.test.mjs';
+import './hitstop.test.mjs';

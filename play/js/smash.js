@@ -1,19 +1,20 @@
 // Breakaway lamp posts and in-town trees: drive into one and it topples or flies. The maths
-// (hit filter, launch, kick-again, keeping clear of the car and buildings, reset rule) is in
-// breakaway.js; this file runs it each frame, moves the instances that draw each object, dims a
-// knocked lamp's head, and puts everything back out of view 20 seconds later.
+// (hit filter, launch, kick-again, keeping clear of the car and buildings, where debris is solid
+// to the car, reset rule) is in breakaway.js; this file runs it each frame, moves the instances
+// that draw each object, dims a knocked lamp's head, and puts everything back out of view 20
+// seconds later.
 //
 // Fires on `events`: smash { kind, strength, mode } (mode 'topple', 'launch' or 'kick').
 import * as THREE from 'three';
 import {
   createBreakable, strike, stepBreakable, speedAfterHit, canRestore, restoreBreakable, touchesCar,
-  headingInto, debrisInWay, rekick, clearOfCar, worldEnv,
+  headingInto, debrisInWay, rekick, clearOfCar, blockCar, worldEnv, KICK_MIN, CAR_BODY,
 } from './breakaway.js';
 
 const MIN_SPEED = 0.2;       // slower than this, the car is resting against it, not hitting it
 const TELEPORT = 5;          // a car that moved further than this in a frame was reset or travelled
 const FLICKER = 0.36;        // seconds a knocked lamp flickers before it goes out
-const KICK_SOUND_GAP = 0.3;  // seconds between kick sounds from one body
+const KICK_SOUND_GAP = 0.3;  // seconds between kick sounds from one body (and after its strike)
 // The dead head is cool grey, so it reads as unlit glass rather than a dirty bulb.
 const LIT = new THREE.Color('#ffffff'), DIM = new THREE.Color('#77808a');
 
@@ -41,7 +42,8 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
     return b;
   });
 
-  // Real buildings catch a falling top and push bodies out; the plot edge keeps them in.
+  // Real buildings catch a falling top and push bodies out; the plot edge keeps them in. With the
+  // car in it, a wall never throws a body back at the car.
   const env = worldEnv(world);
 
   const moving = new Set();     // knocked bodies whose pose changes (flying, falling, flickering)
@@ -49,6 +51,10 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
   const dirtyMeshes = new Set();
   const prev = { x: car.x, z: car.z };
   const carNow = { x: 0, z: 0, y: 0, vx: 0, vz: 0, heading: 0 };
+  env.car = carNow;
+  const syncCar = () => {
+    carNow.x = car.x; carNow.z = car.z; carNow.y = car.y; carNow.vx = car.vx; carNow.vz = car.vz; carNow.heading = car.heading;
+  };
   let clock = 0;
 
   const frustum = new THREE.Frustum(), sphere = new THREE.Sphere(), M = new THREE.Matrix4();
@@ -76,8 +82,10 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
     if (b.occluder) b.occluder.off = true;
     const speed = Math.hypot(car.vx, car.vz);
     const dx = car.vx / speed, dz = car.vz / speed;
-    const { mode } = strike(b, carNow, clock, { reduced: reducedMotion });
-    const after = speedAfterHit(b.kind, car.vx, car.vz, mode);
+    const { mode, loss } = strike(b, carNow, clock, { reduced: reducedMotion });
+    // Reduced motion pays what the full-motion hit would have: the same speed, a calmer fall.
+    const after = speedAfterHit(b.kind, car.vx, car.vz, loss);
+    b.struckAt = clock;
     car.vx = after.vx; car.vz = after.vz;
     // The view lurches towards the car's travel with the knock (none under reduced motion).
     chase.nudge(Math.min(speed, 20) * (b.kind === 'tree' ? 0.55 : 0.3), dx, dz);
@@ -92,11 +100,31 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
     rekick(b, carNow, clock, { reduced: reducedMotion });
     car.vx *= 0.95; car.vz *= 0.95;
     moving.add(b);
-    if (!(clock - (b.kickSound ?? -Infinity) < KICK_SOUND_GAP)) {
+    // No kick sound on the heels of its own strike (or of another kick): one knock, one sound.
+    const last = Math.max(b.kickSound ?? -Infinity, b.struckAt ?? -Infinity);
+    if (!(clock - last < KICK_SOUND_GAP)) {
       b.kickSound = clock;
       emit('smash', { kind: b.kind, strength: speed * 0.5, mode: 'kick' });
     }
   }
+
+  /**
+   * Where a body is solid to the car (debris pinned against a wall, one too slow to kick or hit):
+   * back the car out of it. Above the kick speed, also stop its motion into it.
+   */
+  function block(b, speed) {
+    const push = blockCar(b, carNow);
+    if (!push) return;
+    car.x += push.dx; car.z += push.dz;
+    if (speed >= KICK_MIN) {
+      const vn = car.vx * push.nx + car.vz * push.nz;
+      if (vn < 0) { car.vx -= vn * push.nx; car.vz -= vn * push.nz; }
+    }
+    car.syncObject();
+    syncCar();
+  }
+
+  const reach = CAR_BODY.hl + 6;
 
   return {
     bodies,
@@ -104,8 +132,9 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
     update(dt, paused) {
       if (paused) { prev.x = car.x; prev.z = car.z; return; }
       clock += dt;
-      Object.assign(carNow, { x: car.x, z: car.z, y: car.y, vx: car.vx, vz: car.vz, heading: car.heading });
+      syncCar();
       if (Math.hypot(car.x - prev.x, car.z - prev.z) > TELEPORT) { prev.x = car.x; prev.z = car.z; }
+      const step = Math.hypot(car.x - prev.x, car.z - prev.z); // how far the car moved this frame
       const speed = Math.hypot(car.vx, car.vz);
       if (speed > MIN_SPEED) {
         const minX = Math.min(prev.x, car.x) - 3, maxX = Math.max(prev.x, car.x) + 3;
@@ -134,10 +163,19 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
           else setLight(b, Math.floor(t / 0.06) % 3 !== 1);
         }
       }
-      // Never drawn inside the car: anything knocked that it is sitting in gets slid on ahead.
+      // Never drawn inside the car: anything knocked that it is sitting in gets slid on ahead
+      // (or along a wall it is pinned against); what still can't clear stops the car short.
       for (const b of knocked) {
         if (Math.abs(b.x - car.x) > 8 || Math.abs(b.z - car.z) > 8) continue;
-        if (clearOfCar(b, carNow, env)) moving.add(b);
+        if (clearOfCar(b, carNow, env, CAR_BODY, step)) moving.add(b);
+        block(b, speed);
+      }
+      // Creeping into a standing one too slowly to knock it: it is solid.
+      if (speed <= MIN_SPEED) {
+        for (const b of bodies) {
+          if (b.mode !== 'standing' || Math.abs(b.home.x - car.x) > reach || Math.abs(b.home.z - car.z) > reach) continue;
+          block(b, speed);
+        }
       }
       for (const b of moving) {
         draw(b);

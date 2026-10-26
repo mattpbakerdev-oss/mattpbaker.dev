@@ -5,12 +5,13 @@
 // `colliders` but in `breakables`, footprint circles carrying the instances that draw them.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PLOT_HALF, PLOT_CORNER, ROADS, PLAZA, FOUNTAIN, RAMPS, PARK, START, WELCOME_SIGN, ROAD_WIDTH } from './layout.js';
+import { PLOT_HALF, PLOT_CORNER, ROADS, PLAZA, FOUNTAIN, RAMPS, START, WELCOME_SIGN, ROAD_WIDTH } from './layout.js';
 import { PLACES, RING_RADIUS, ringCentre, footprintRect } from './places.js';
-import { groundHeight, circleOverlapsRect, rectsOverlap, rampFootprint, plotDistance } from './physics.js';
+import { groundHeight, circleOverlapsRect, rectsOverlap, rampFootprint } from './physics.js';
 import { rimTrees, rimHills } from './rim.js';
 import { TOWNSFOLK } from './walkers.js';
 import { splitColliders, clearanceColliders } from './breakaway.js';
+import { scatter } from './spots.js';
 
 export const COLOURS = {
   skyTop: '#9fd3ff', skyMid: '#cfe8fb', horizon: '#ffd9b0',
@@ -50,14 +51,6 @@ export function box(w, h, d, x = 0, y = 0, z = 0, rotY = 0) {
   return g.translate(x, y, z);
 }
 
-function rng(seed) {
-  return () => {
-    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 export function buildWorld(scene) {
   const colliders = [];
@@ -111,34 +104,17 @@ export function buildWorld(scene) {
     sun.position.set(x + sunOffset.x, sunOffset.y, z + sunOffset.z);
   });
 
-  const rand = rng(20261025);
-  const onAnyRoad = (x, z, r) => ROADS.some((road) => circleOverlapsRect(x, z, r, road));
-  const placeRects = PLACES.map((p) => footprintRect(p));
-  const rings = PLACES.map((p) => ringCentre(p));
-  const rampZones = RAMPS.map((ramp) => {
-    // Keep the run-up and the landing strip clear as well as the ramp itself.
-    const f = rampFootprint(ramp);
-    const fx = Math.sin(ramp.heading), fz = Math.cos(ramp.heading);
-    return [f, { x: ramp.x + fx * 16, z: ramp.z + fz * 16, w: Math.abs(fx) * 26 + ramp.width + 4, d: Math.abs(fz) * 26 + ramp.width + 4 },
-      { x: ramp.x - fx * 9, z: ramp.z - fz * 9, w: Math.abs(fx) * 12 + ramp.width, d: Math.abs(fz) * 12 + ramp.width }];
-  }).flat();
-  const blocked = (x, z, r) =>
-    onAnyRoad(x, z, r) ||
-    Math.hypot(x - PLAZA.x, z - PLAZA.z) < PLAZA.r + r + 1 ||
-    placeRects.some((rect) => circleOverlapsRect(x, z, r + 2, rect)) ||
-    rings.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < RING_RADIUS + r + 2) ||
-    rampZones.some((rect) => circleOverlapsRect(x, z, r + 1, rect)) ||
-    Math.hypot(x - WELCOME_SIGN.x, z - WELCOME_SIGN.z) < r + 4 ||
-    plotDistance(x, z) > -(r + 3);
+  // The seeded scatter (grass patches, lamp posts, trees) is pure, in spots.js, so tests place
+  // exactly what is drawn here. The rim carries on from the same random stream.
+  const { rand, props, patches, lamps, trees: treeSpotList } = scatter();
 
-  buildGround(scene, rand, vertexMat);
+  buildGround(scene, patches, vertexMat);
   buildRoads(scene, vertexMat);
   buildPlaza(scene, colliders, updaters, vertexMat);
   buildRamps(scene, vertexMat);
   buildPlaces(scene, colliders);
-  const props = [];
-  const lampParts = buildLampPosts(scene, colliders, blocked, props);
-  const trees = buildTrees(scene, colliders, rand, blocked, props);
+  const lampParts = buildLampPosts(scene, colliders, lamps);
+  const trees = buildTrees(scene, colliders, treeSpotList);
   buildBenches(scene, colliders, props);
   buildRim(scene, rand, vertexMat);
 
@@ -166,19 +142,16 @@ export function buildWorld(scene) {
   };
 }
 
-function buildGround(scene, rand, mat) {
+function buildGround(scene, patchSpots, mat) {
   const grass = new THREE.Mesh(new THREE.CircleGeometry(520, 48).rotateX(-Math.PI / 2), material({ color: COLOURS.grass }));
   grass.receiveShadow = true;
   scene.add(grass);
 
-  // Darker mown patches for texture, kept off the roads.
-  const parts = [];
-  for (let i = 0; i < 70; i++) {
-    const x = (rand() * 2 - 1) * 110, z = (rand() * 2 - 1) * 110, r = 3 + rand() * 8;
-    if (ROADS.some((road) => circleOverlapsRect(x, z, r, road)) || Math.hypot(x, z) < PLAZA.r + r) continue;
-    const g = new THREE.CircleGeometry(r, 7).rotateX(-Math.PI / 2).rotateY(rand() * 6).scale(1, 1, 0.6 + rand() * 0.4);
-    parts.push({ geo: g.translate(x, 0.01, z), color: COLOURS.grassDark });
-  }
+  // Darker mown patches for texture, kept off the roads (spots.js places them).
+  const parts = patchSpots.map(({ x, z, r, rot, sz }) => ({
+    geo: new THREE.CircleGeometry(r, 7).rotateX(-Math.PI / 2).rotateY(rot).scale(1, 1, sz).translate(x, 0.01, z),
+    color: COLOURS.grassDark,
+  }));
   const patches = new THREE.Mesh(mergeColoured(parts), mat);
   patches.receiveShadow = true;
   scene.add(patches);
@@ -372,32 +345,7 @@ function instanced(geo, mat, items, castShadow = true) {
   return mesh;
 }
 
-function buildLampPosts(scene, colliders, blocked, props) {
-  const spots = [];
-  const tooClose = (x, z) => props.some((p) => Math.hypot(p.x - x, p.z - z) < 6);
-  const off = ROAD_WIDTH / 2 + 1.3;
-  for (const road of ROADS) {
-    const alongX = road.w >= road.d;
-    const len = alongX ? road.w : road.d;
-    for (const side of [-1, 1]) {
-      for (let s = -len / 2 + 9 + (side > 0 ? 9 : 0); s < len / 2 - 6; s += 18) {
-        const x = alongX ? road.x + s : road.x + side * off;
-        const z = alongX ? road.z + side * off : road.z + s;
-        if (blocked(x, z, 0.4) || tooClose(x, z)) continue;
-        // Arm reaches over the road.
-        const rot = alongX ? (side > 0 ? Math.PI : 0) : (side > 0 ? -Math.PI / 2 : Math.PI / 2);
-        spots.push({ x, z, rot });
-        props.push({ x, z });
-      }
-    }
-  }
-  for (let i = 0; i < 4; i++) {
-    const a = Math.PI / 4 + (i * Math.PI) / 2;
-    const r = PLAZA.r + 1.4;
-    const x = Math.cos(a) * r, z = Math.sin(a) * r;
-    spots.push({ x, z, rot: Math.atan2(-x, -z) });
-    props.push({ x, z });
-  }
+function buildLampPosts(scene, colliders, spots) {
   const pole = new THREE.CylinderGeometry(0.12, 0.17, 4.6, 6).translate(0, 2.3, 0);
   const arm = box(0.12, 0.12, 1.2, 0, 4.5, 0.5);
   const geo = mergeGeometries([pole.toNonIndexed().deleteAttribute('uv'), arm.toNonIndexed().deleteAttribute('uv')]);
@@ -414,25 +362,16 @@ function buildLampPosts(scene, colliders, blocked, props) {
   return spots.map((s, i) => [{ mesh: poles, index: i }, { mesh: heads, index: i, light: true }]);
 }
 
-function buildTrees(scene, colliders, rand, blocked, props) {
+function buildTrees(scene, colliders, spots) {
   const trunks = [], round = [], pines = [], links = [];
   const greens = ['#4f9a4a', '#5aa652', '#6db35a', '#3f8a48', '#7fbf5e'].map((c) => new THREE.Color(c));
   const pineGreens = ['#2f7a4a', '#3b8a52', '#2a6e44'].map((c) => new THREE.Color(c));
-  const near = (x, z, d) => props.some((p) => Math.hypot(p.x - x, p.z - z) < d);
-  const inPark = (x, z) => Math.abs(x - PARK.x) < PARK.w / 2 && Math.abs(z - PARK.z) < PARK.d / 2;
-  let tries = 0;
-  while (trunks.length < 150 && tries++ < 6000) {
-    const x = (rand() * 2 - 1) * (PLOT_HALF - 4), z = (rand() * 2 - 1) * (PLOT_HALF - 4); // blocked() keeps them off the rounded edge
-    if (blocked(x, z, 1.4) || near(x, z, 4.2)) continue;
-    if (inPark(x, z) && rand() < 0.6) continue; // the park stays mostly open lawn
-    const s = 0.8 + rand() * 0.6;
-    const pine = rand() < 0.35;
+  for (const { x, z, s, trunkRot, canopyRot, pine, shade } of spots) {
     const canopy = pine ? pines : round;
     links.push({ pine, index: canopy.length });
     colliders.push({ type: 'circle', x, z, r: 0.45 * s + 0.15, s, rot: 0, kind: 'tree', tree: trunks.length });
-    trunks.push({ x, z, s, rot: rand() * 6 });
-    canopy.push({ x, z, s, rot: rand() * 6, color: (pine ? pineGreens : greens)[Math.floor(rand() * (pine ? 3 : 5))] });
-    props.push({ x, z });
+    trunks.push({ x, z, s, rot: trunkRot });
+    canopy.push({ x, z, s, rot: canopyRot, color: (pine ? pineGreens : greens)[Math.floor(shade * (pine ? 3 : 5))] });
   }
   const meshes = addTreeMeshes(scene, trunks, round, pines);
   // Knocked trees fly anywhere in the plot, so never cull on the stale instance bounds.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   BREAKABLE, launchSpeed, createBreakable, strike, stepBreakable, speedAfterHit,
   canRestore, restoreBreakable, splitColliders, clearanceColliders, tipAngle, touchesCar,
-  headingInto, debrisInWay, rekick, clearOfCar, bodySamples, worldEnv,
+  headingInto, debrisInWay, rekick, clearOfCar, blockCar, bodySamples, worldEnv, CAR_BODY,
 } from '../js/breakaway.js';
 import { blockers, pointInside } from '../js/occlusion.js';
 
@@ -194,13 +194,14 @@ test('a launch always beats the car: forward speed above the car speed after the
   }
 });
 
-test('a launch goes sideways at 0.35 of its forward speed, to the side of the car it was on', () => {
+test('a launch goes sideways at 0.25 to 0.5 of its forward speed (by how far off centre), to the side of the car it was on', () => {
+  const share = 0.25 + 0.25 * (0.5 / (CAR_BODY.hw + 0.35));
   const right = lamp();
   strike(right, { x: -0.5, z: -1.6, vx: 0, vz: 20 }, 0); // lamp sits to the car's +x side
-  assert.ok(Math.abs(right.vx - 0.35 * right.vz) < 1e-9, `lateral ${right.vx} vs ${right.vz}`);
+  assert.ok(Math.abs(right.vx - share * right.vz) < 1e-9, `lateral ${right.vx} vs ${right.vz}`);
   const left = lamp();
   strike(left, { x: 0.5, z: -1.6, vx: 0, vz: 20 }, 0);
-  assert.ok(Math.abs(left.vx + 0.35 * left.vz) < 1e-9);
+  assert.ok(Math.abs(left.vx + share * left.vz) < 1e-9);
   // Dead centre: a coin toss.
   const a = lamp(), c = lamp();
   strike(a, { x: 0, z: -1.6, vx: 0, vz: 20 }, 0, { rand: () => 0.1 });
@@ -211,20 +212,22 @@ test('a launch goes sideways at 0.35 of its forward speed, to the side of the ca
 test('a launch lifts by (5.5 + 0.3 per unit over launch speed) * sqrt(k) and tumbles end over end along its flight line', () => {
   for (const b of [lamp(), tree()]) {
     const speed = 24;
-    strike(b, hitFrom(b, speed), 0);
+    strike(b, hitFrom(b, speed, 0), 0, { rand: () => 0.5 });
     const k = Math.sqrt(2 / b.mass);
     assert.ok(Math.abs(b.vy - (5.5 + (speed - launchSpeed(b)) * 0.3) * Math.sqrt(k)) < 1e-9);
     assert.ok(Math.abs(b.wx * b.vx + b.wz * b.vz) < 1e-9, 'spin axis square to the flight line');
-    assert.equal(b.wy, 0);
+    assert.equal(b.wy, 0, 'no yaw from a dead-centre hit');
     // The top tips away from the car: w = (h.z, 0, -h.x) * spin.
     assert.ok(b.wx > 0);
     const spin = Math.hypot(b.wx, b.wz);
-    if (b.kind === 'lamp') assert.ok(Math.abs(spin - (2 + speed * 0.17) * k) < 1e-9);
+    // A lamp: 1.3 turns by the time it is back down to launch height (2 vy / g); a tree: 2.5 + 0.28 v.
+    if (b.kind === 'lamp') assert.ok(Math.abs(spin * (2 * b.vy / 25) - 1.3 * 2 * Math.PI) < 1e-6, `lamp spin ${spin}`);
     else assert.ok(Math.abs(spin - (2.5 + speed * 0.28) * k) < 1e-9);
   }
 });
 
-// The car's body: a box 2.1 wide, 3.7 long, from 0.1 to 2.0 high, centred on the car.
+// The car's body as drawn: 2.2 wide, 4.06 bumper to bumper, roof at 2.0 but the front 1.3 only
+// bonnet high (1.4), centred on the car.
 function insideCar(b, car) {
   const hd = Math.hypot(car.vx, car.vz) > 0.01 ? Math.atan2(car.vx, car.vz) : 0;
   const s = Math.sin(hd), c = Math.cos(hd);
@@ -232,15 +235,16 @@ function insideCar(b, car) {
   for (const [x, y, z, , r] of bodySamples(b).slice(0, BREAKABLE[b.kind].visible)) {
     const dx = x - car.x, dz = z - car.z;
     const lx = dx * c - dz * s, lz = dx * s + dz * c;
-    const ex = Math.max(0, Math.abs(lx) - 1.05), ez = Math.max(0, Math.abs(lz) - 1.85), ey = Math.max(0, Math.abs(y - 1.05) - 0.95);
+    const top = lz > CAR_BODY.hl - 1.3 ? 1.4 : 2;
+    const ex = Math.max(0, Math.abs(lx) - CAR_BODY.hw), ez = Math.max(0, Math.abs(lz) - CAR_BODY.hl), ey = Math.max(0, y - top);
     worst = Math.min(worst, Math.hypot(ex, ey, ez) - r);
   }
-  return worst < 0;
+  return worst < -0.02;
 }
 
 /** Drives the car straight through one, the way smash.js wires it, and counts frames inside the car. */
 function drive(b, speed, { reduced = false, dt = 1 / 60, offset = 0, accel = 0, secs = 4, rand = () => 0.7 } = {}) {
-  const car = { x: b.home.x + offset, z: b.home.z - (1.95 + b.r + 0.02), y: 0, vx: 0, vz: speed };
+  const car = { x: b.home.x + offset, z: b.home.z - (CAR_BODY.hl + b.r + 0.02), y: 0, vx: 0, vz: speed };
   const prev = { x: car.x, z: car.z - speed * dt };
   let frames = 0, inside = 0, hitAt = -1, kicks = 0, launched = false;
   for (let i = 0; i < secs / dt; i++) {
@@ -255,7 +259,15 @@ function drive(b, speed, { reduced = false, dt = 1 / 60, offset = 0, accel = 0, 
       car.vx *= 0.95; car.vz *= 0.95; kicks++;
     }
     stepBreakable(b, dt, open);
-    clearOfCar(b, car);
+    clearOfCar(b, car, null, CAR_BODY, Math.hypot(car.x - prev.x, car.z - prev.z));
+    if (b.mode !== 'standing') {
+      const push = blockCar(b, car);
+      if (push) {
+        car.x += push.dx; car.z += push.dz;
+        const vn = car.vx * push.nx + car.vz * push.nz;
+        if (vn < 0) { car.vx -= vn * push.nx; car.vz -= vn * push.nz; }
+      }
+    }
     if (b.mode === 'launch') launched = true;
     if (hitAt >= 0 && i - hitAt > 2 && insideCar(b, car)) inside++;
     if (hitAt >= 0) frames++;
@@ -289,7 +301,7 @@ test('reduced motion never launches: it topples, turned 55 degrees to the glanci
     const ang = Math.atan2(b.dirX, b.dirZ);
     assert.ok(Math.abs(ang - (55 * Math.PI) / 180) < 1e-6, `fall turned ${(ang * 180) / Math.PI} degrees`);
     assert.ok(Math.abs(b.bvx - 4) < 1e-9, `sideways shove ${b.bvx}`);
-    assert.ok(Math.abs(b.bvz - 28 * 0.6) < 1e-9);
+    assert.ok(Math.abs(b.bvz - 5) < 1e-9, 'along the car capped at 5');
     let maxY = 0;
     run(b, 4, open, (x) => { assert.notEqual(x.mode, 'launch'); maxY = Math.max(maxY, x.y + x.low); });
     assert.ok(maxY < 0.05, `left the ground: ${maxY}`);
@@ -320,14 +332,14 @@ test('a normal topple falls 35% toward the glancing side and the base takes 0.6 
   assert.ok(Math.abs(b.bvz - 4 * 0.6) < 1e-9 && b.bvx === 0);
 });
 
-test('a launched tree settles over a quarter second into the toppled pose: trunk base and canopy both on the ground', () => {
+test('a launched tree settles over about a third of a second into the toppled pose: trunk base and canopy both on the ground', () => {
   for (const s of [0.9, 1.2]) {
     const b = tree(s);
     strike(b, carAt(26), 0);
     let settleFrames = 0;
     run(b, 10, open, (x) => { if (x.mode === 'settle') settleFrames++; });
     assert.equal(b.mode, 'down');
-    assert.ok(settleFrames >= 13 && settleFrames <= 16, `settled over ${settleFrames} frames`);
+    assert.ok(settleFrames >= 20 && settleFrames <= 23, `settled over ${settleFrames} frames`);
     assert.ok(Math.abs(b.theta - BREAKABLE.tree.rest) < 1e-9);
     // Trunk base on the ground.
     const base = bodySamples(b)[0];
@@ -339,19 +351,23 @@ test('a launched tree settles over a quarter second into the toppled pose: trunk
 });
 
 test('across a ramp edge a launched tree stays as it landed, rather than settling into air', () => {
+  // Where the same throw would first start to settle, put a ramp's top edge (2 high) under its crown.
   const flatRun = tree();
   strike(flatRun, carAt(26), 0, { rand: () => 0.9 });
-  run(flatRun, 10);
-  // The same throw, but a ramp's top edge (2 high) sits where its crown would come down.
+  let at = null;
+  run(flatRun, 10, open, (x) => { if (x.mode === 'settle' && !at) at = { x: x.baseX, z: x.baseZ, dx: x.dirX, dz: x.dirZ }; });
   const reach = flatRun.height * Math.sin(BREAKABLE.tree.rest);
-  const cx = flatRun.baseX + flatRun.dirX * reach, cz = flatRun.baseZ + flatRun.dirZ * reach;
-  const ramp = (x, z) => (Math.hypot(x - cx, z - cz) < 0.4 ? 2 : 0);
+  const cx = at.x + at.dx * reach, cz = at.z + at.dz * reach;
+  const ramp = (x, z) => (Math.hypot(x - cx, z - cz) < 0.6 ? 2 : 0);
   const b = tree();
   strike(b, carAt(26), 0, { rand: () => 0.9 });
-  let settled = false;
-  run(b, 10, { groundAt: ramp }, (x) => { if (x.mode === 'settle') settled = true; });
-  assert.equal(b.mode, 'down');
-  assert.equal(settled, false);
+  run(b, 10, { groundAt: ramp }, (x) => {
+    if (x.mode !== 'settle' || x.settleT > 0.02) return;
+    // Whenever it does start to settle, trunk to crown is flat ground.
+    const g0 = ramp(x.baseX, x.baseZ), g1 = ramp(x.baseX + x.dirX * reach, x.baseZ + x.dirZ * reach);
+    assert.ok(Math.abs(g1 - g0) <= 0.2, 'settled with its crown over the ramp edge');
+  });
+  assert.ok(b.mode === 'down' || b.mode === 'topple');
 });
 
 test('the settle eases from the landed pose: no jump on its first frame', () => {
@@ -407,18 +423,27 @@ test('debrisInWay: the car driving into a fallen one, or catching a slow one, ge
   assert.ok(!debrisInWay(lamp(), { x: 0, z: -1.6, y: 0, vx: 0, vz: 5 }), 'standing ones are the hit test\'s job');
 });
 
-test('rekick: back into the air ahead of the car and off to the side; under reduced motion a shove, never a launch', () => {
+test('rekick: one lying down is shoved along the ground ahead of the car and off to the side, never thrown', () => {
   const b = lamp();
   strike(b, { x: 0, z: -1.6, vx: 0, vz: 3 }, 0, { rand: () => 0.9 });
   run(b, 3);
   // The car comes up on its -x side, so it goes off to +x.
   const car = { x: Math.min(...bodySamples(b).map((p) => p[0])) - 0.5, z: b.z - 1.5, y: 0, vx: 0, vz: 10 };
   rekick(b, car, 5);
-  assert.equal(b.mode, 'launch');
-  assert.equal(b.vy, 3);
-  assert.ok(b.vz >= 14 - 1e-9, `forward ${b.vz}`);
-  assert.ok(Math.abs(Math.abs(b.vx) - 4) < 1e-9 && b.vx > 0, `sideways ${b.vx}`);
+  assert.equal(b.mode, 'topple');
+  assert.ok(b.bvz >= 14 - 1e-9, `forward ${b.bvz}`);
+  assert.ok(Math.abs(b.bvx - 4) < 1e-9, `sideways ${b.bvx}`);
   assert.equal(b.knockedAt, 5);
+  run(b, 3, open, (x) => { assert.notEqual(x.mode, 'launch'); assert.ok(Math.abs(bodySamples(x)[0][1]) < 0.05, 'base left the ground'); });
+
+  // One still flying slower than the car is sent on, with no lift.
+  const f = lamp();
+  strike(f, carAt(14), 0, { rand: () => 0.9 });
+  run(f, 0.2);
+  const vy = f.vy;
+  rekick(f, { x: f.x - 0.5, z: f.z - 2.5, y: 0, vx: 0, vz: 20 }, 5);
+  assert.equal(f.mode, 'launch');
+  assert.ok(f.vz >= 24 - 1e-9 && f.vy === Math.max(vy, 0));
 
   const r = lamp();
   strike(r, { x: 0, z: -1.6, vx: 0, vz: 3 }, 0, { reduced: true, rand: () => 0.9 });
@@ -426,16 +451,24 @@ test('rekick: back into the air ahead of the car and off to the side; under redu
   rekick(r, { x: Math.min(...bodySamples(r).map((p) => p[0])) - 0.5, z: r.z - 1.5, y: 0, vx: 0, vz: 10 }, 5, { reduced: true });
   assert.equal(r.mode, 'topple');
   assert.ok(r.bvz >= 14 - 1e-9 && Math.abs(r.bvx - 4) < 1e-9);
+  assert.equal(r.yawRate, 0, 'no swing under reduced motion');
   run(r, 3, open, (x) => assert.notEqual(x.mode, 'launch'));
 });
 
 test('clearOfCar: a part inside the car body slides the whole thing on ahead of the bumper', () => {
   const b = lamp();
   strike(b, { x: 0, z: -2.3, vx: 0, vz: 28 }, 0, { rand: () => 0.9 });
-  const car = { x: 0, z: -1, y: 0, vx: 0, vz: 25 }; // bumper at z 0.95, past the pole's base
+  const car = { x: 0, z: -1.08, y: 0, vx: 0, vz: 25 }; // bumper at z 0.95, past the pole's base
   const before = b.z;
   assert.ok(clearOfCar(b, car));
   assert.ok(b.z > before && b.z - before <= 0.45 + 1e-9, 'a shove, not a jump');
+  // A falling one moves no more than just over the car's own step.
+  const t = lamp();
+  strike(t, { x: 0, z: -2.5, vx: 0, vz: 4 }, 0, { rand: () => 0.9 });
+  for (let i = 0; i < 6; i++) stepBreakable(t, 1 / 60, open);
+  const tz = t.baseZ;
+  assert.ok(clearOfCar(t, { x: 0, z: t.baseZ - 1.9, y: 0, vx: 0, vz: 4 }, null, CAR_BODY, 4 / 60));
+  assert.ok(t.baseZ - tz <= Math.max(4 / 60 + 0.05, 0.1) + 1e-9, `slid ${t.baseZ - tz}`);
   for (let i = 0; i < 5; i++) clearOfCar(b, car);
   const [, , baseZ, , r] = bodySamples(b)[0];
   assert.ok(baseZ - r >= 0.95 - 1e-9, `base still at ${baseZ}`);

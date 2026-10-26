@@ -15,6 +15,7 @@ import { createSmash } from './smash.js';
 import { createAudio } from './audio.js';
 import { WebGLFailure, isWebGLFailure } from './bootfail.js';
 import { orbitPose, swoopBlend } from './titlecam.js';
+import { createHitStop, wantsHitStop } from './hitstop.js';
 
 const MAX_PIXEL_RATIO = 1.75;
 const MAX_DT = 0.05;   // clamp long frames (tab switches) so the car never tunnels
@@ -134,6 +135,13 @@ async function boot() {
   const extras = createExtras({ scene, camera, world, car, events, ui, reducedMotion });
   const smash = createSmash({ camera, world, car, events, chase, fader, occluders, reducedMotion });
   const audio = createAudio({ events, car, ui });
+  // On a phone a fast smash holds for about three frames so the impact reads on the small screen.
+  const hitStop = createHitStop();
+  const coarse = matchMedia('(pointer: coarse)');
+  events.addEventListener('smash', (e) => {
+    const narrow = Math.min(window.innerWidth, window.innerHeight) <= 540;
+    if (wantsHitStop(e.detail, { coarse: coarse.matches, narrow, reduced: reducedMotion })) hitStop.trigger();
+  });
 
   world.update(0, car.position, camera);
   await renderer.compileAsync(scene, camera).catch(() => {});
@@ -151,7 +159,7 @@ async function boot() {
 
   let last = performance.now();
   function frame(now) {
-    const dt = Math.min((now - last) / 1000, MAX_DT);
+    const dt = hitStop.step(Math.min((now - last) / 1000, MAX_DT));
     last = now;
     const edges = input.update();
     if (edges.reset) { car.reset(); chase.snap(); swoop = null; emit('reset'); }
