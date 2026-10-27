@@ -11,7 +11,7 @@ const nonEmptyString = (v) => typeof v === 'string' && v.trim().length > 0;
 const nonEmptyArray = (v) => Array.isArray(v) && v.length > 0;
 
 const REQUIRED = {
-  project: ['title', 'tagline', 'body', 'stats', 'media', 'tech', 'links'],
+  project: ['title', 'tagline', 'body', 'stats', 'media', 'tech'], // and links, or a status line when there are none
   about: ['title', 'body', 'links'],
   contact: ['title', 'body', 'links'],
   soon: [],
@@ -19,10 +19,10 @@ const REQUIRED = {
 
 test('there is one entry for each place in the spec', () => {
   const ids = PLACES.map((p) => p.id);
-  for (const id of ['up-lock', 'listing-check', 'ugc-pipeline', 'house', 'post-office']) {
+  for (const id of ['up-lock', 'listing-check', 'ugc-pipeline', 'father-christmas-video', 'house', 'post-office']) {
     assert.ok(ids.includes(id), `missing ${id}`);
   }
-  assert.equal(PLACES.filter((p) => p.kind === 'soon').length, 3);
+  assert.equal(PLACES.filter((p) => p.kind === 'soon').length, 2);
 });
 
 test('ids are unique', () => {
@@ -42,6 +42,7 @@ for (const place of PLACES) {
       const v = place[field];
       assert.ok(nonEmptyString(v) || nonEmptyArray(v), `${field} is missing or empty`);
     }
+    if (place.kind === 'project') assert.ok(nonEmptyArray(place.links) || nonEmptyString(place.status), 'links, or a status line');
     if (place.body) assert.ok(place.body.every(nonEmptyString), 'body paragraphs');
     for (const s of place.stats ?? []) assert.ok(nonEmptyString(s.value) && nonEmptyString(s.label), 'stat');
     for (const l of place.links ?? []) assert.ok(nonEmptyString(l.label) && nonEmptyString(l.href), 'link');
@@ -55,7 +56,7 @@ for (const place of PLACES) {
 
   test(`${place.id}: local media and links exist in the repo`, () => {
     const paths = [];
-    for (const m of place.media ?? []) paths.push(m.src, m.poster);
+    for (const m of place.media ?? []) paths.push(m.src, m.poster, m.captions);
     for (const l of place.links ?? []) paths.push(l.href);
     for (const p of paths) {
       if (typeof p !== 'string' || !p.startsWith('/')) continue;

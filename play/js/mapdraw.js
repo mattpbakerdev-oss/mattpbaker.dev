@@ -17,13 +17,14 @@ const PIN_ICON = {
 };
 const TICK = 'M4.2 8.4l2.6 2.6 5-5.6';
 export const MODEL_COLOUR = {
-  gym: '#e8735a', condo: '#5bb5a2', studio: '#8f7ad8', house: '#f3e7d3', 'post-office': '#f2c14e', site: '#b88a5a',
+  gym: '#e8735a', condo: '#5bb5a2', studio: '#8f7ad8', house: '#f3e7d3', 'post-office': '#f2c14e', site: '#b88a5a', grotto: '#1f6f4f',
 };
 
 const HALF = PLOT_HALF + 2;
 // Matt's house and the post office sit side by side: the house label goes underneath and the
 // post office's to the right of its building, so neither runs into the other or the Up Lock pin.
-const LABEL_BELOW = new Set(['Matt’s house']);
+// Father Christmas Video sits beside the building sites, so its long label goes underneath too.
+const LABEL_BELOW = new Set(['Matt’s house', 'Father Christmas Video']);
 const LABEL_RIGHT = new Set(['Post office']);
 
 /** World to canvas pixels for a square canvas `size` px wide with `pad` px of margin. */

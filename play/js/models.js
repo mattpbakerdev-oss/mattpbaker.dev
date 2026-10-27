@@ -559,4 +559,148 @@ function site(place_) {
   return mesh(p, [face]);
 }
 
-Object.assign(MODEL_BUILDERS, { gym, condo, studio, house, 'post-office': postOffice, site });
+// Father Christmas Video: a snowy timber grotto, warm lit windows, a green door with a wreath,
+// a gold star on the ridge, a green and gold sleigh and presents out front, a snowy fir.
+const G_GREEN = '#24614a', G_GREEN_DARK = '#1b4a38', G_GOLD = '#e2b347', SNOW = '#f6f8fb';
+const SNOW_PAD = '#dbe5ec', TIMBER = '#9a6a43', TIMBER_DARK = '#6b4429', GLOW = '#ffcf6a', STONE_G = '#b8ab98';
+
+/** A lit cottage window on a +z facing wall at z: green frame, warm glass, gold sill. */
+function litWindow(w, h, x, y, z) {
+  return [
+    B(w + 0.34, h + 0.34, 0.12, x, y, z + 0.02, G_GREEN),
+    B(w, h, 0.1, x, y, z + 0.08, GLOW),
+    B(0.1, h, 0.06, x, y, z + 0.15, TIMBER_DARK), B(w, 0.1, 0.06, x, y, z + 0.15, TIMBER_DARK),
+    B(w + 0.6, 0.16, 0.4, x, y - h / 2 - 0.2, z + 0.2, G_GOLD),
+    B(w + 0.5, 0.12, 0.34, x, y - h / 2 - 0.06, z + 0.2, SNOW),
+  ];
+}
+
+/** A flat five-pointed star facing +z, centred on the origin. */
+function starGeo(r, depth) {
+  const shape = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r;
+    i ? shape.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : shape.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false }).translate(0, 0, -depth / 2);
+}
+
+/** A wrapped present: box plus a ribbon cross over the top and down the sides. */
+function present(w, h, d, x, z, color, ribbon, ry = 0) {
+  return place([
+    B(w, h, d, 0, h / 2, 0, color),
+    B(w + 0.04, h + 0.02, 0.14, 0, h / 2, 0, ribbon), B(0.14, h + 0.02, d + 0.04, 0, h / 2, 0, ribbon),
+    B(0.32, 0.14, 0.14, -0.1, h + 0.06, 0, ribbon, { rz: 0.5 }), B(0.32, 0.14, 0.14, 0.1, h + 0.06, 0, ribbon, { rz: -0.5 }),
+  ], { x, y: 0.12, z, ry });
+}
+
+function grotto() {
+  const p = [];
+  const cx = -1.5, cz = -2, W = 10, D = 7, wallTop = 4.0, front = cz + D / 2;
+  p.push(
+    // Snowy ground with a stone path to the door.
+    B(17.6, 0.12, 13.6, 0, 0.06, 0, SNOW_PAD),
+    G(new THREE.CircleGeometry(4.2, 9).rotateX(-Math.PI / 2).scale(1.4, 1, 1).translate(-4.5, 0.13, 4.2), SNOW),
+    G(new THREE.CircleGeometry(3.2, 8).rotateX(-Math.PI / 2).scale(1.3, 1, 1).translate(5.4, 0.13, -3.8), SNOW),
+    ...[2.4, 3.6, 4.8, 6.0].map((z, i) => B(1.3, 0.08, 0.8, cx + (i % 2 ? 0.12 : -0.12), 0.15, z, STONE_G)),
+    // Stone footing, timber walls, dark corner posts.
+    B(W, 1.1, D, cx, 0.65, cz, STONE_G),
+    B(W - 0.2, 2.9, D - 0.2, cx, 2.55, cz, TIMBER),
+    ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => B(0.4, 2.9, 0.4, cx + sx * (W / 2 - 0.15), 2.55, cz + sz * (D / 2 - 0.15), TIMBER_DARK)),
+    ...[1.55, 2.25, 2.95, 3.65].map((y) => B(W - 0.6, 0.07, 0.06, cx, y, front - 0.07, TIMBER_DARK)),
+    // Gable ends in timber under the roof.
+    G(gable(W - 0.2, 3.2, D - 0.2).translate(cx, wallTop, cz), TIMBER),
+  );
+  // Roof: two green slopes with snow on top, icicles along the front eave.
+  const run = D / 2 + 0.7, rise = 3.2, a = Math.atan2(rise, run), len = Math.hypot(run, rise) + 0.2;
+  for (const side of [1, -1]) {
+    const zc = cz + side * run / 2, yc = wallTop + rise / 2;
+    p.push(B(W + 1.4, 0.32, len, cx, yc + 0.12, zc, G_GREEN_DARK, { rx: side * a }));
+    // Snow stops short of the eave, so a band of green roof shows along the bottom edge.
+    const up = 0.45;
+    p.push(B(W + 1.2, 0.3, len - 0.9, cx, yc + 0.12 + Math.cos(a) * 0.28 + Math.sin(a) * up, zc + side * (Math.sin(a) * 0.28 - Math.cos(a) * up), SNOW, { rx: side * a }));
+    p.push(B(W + 1.5, 0.3, 0.16, cx, wallTop - 0.02, cz + side * (run + 0.05), G_GOLD));
+  }
+  p.push(B(W + 1.3, 0.3, 0.5, cx, wallTop + rise + 0.32, cz, SNOW));
+  for (let i = 0; i < 9; i++) {
+    const x = cx - W / 2 + 0.2 + i * ((W + 0.6) / 8), h = 0.35 + ((i * 37) % 5) * 0.08;
+    p.push(G(new THREE.ConeGeometry(0.09, h, 4).rotateX(Math.PI).translate(x, wallTop - 0.05 - h / 2 + 0.02, cz + run - 0.05), '#dff3ff'));
+  }
+  // Chimney through the back slope, snow on its cap.
+  p.push(
+    B(1.2, 3.6, 1.2, 1.6, 6.4, cz - 1.7, STONE_G),
+    B(1.45, 0.3, 1.45, 1.6, 8.3, cz - 1.7, '#8e8272'),
+    B(1.5, 0.25, 1.5, 1.6, 8.55, cz - 1.7, SNOW),
+  );
+  // Gold star on the ridge above the door.
+  p.push(G(starGeo(0.85, 0.22).translate(cx, wallTop + rise + 1.25, cz), G_GOLD));
+  p.push(B(0.16, 0.6, 0.16, cx, wallTop + rise + 0.55, cz, G_GOLD));
+  // Green door with a gold frame, a wreath with a red bow, and a lantern either side.
+  p.push(
+    B(1.9, 2.95, 0.12, cx, 1.6, front + 0.02, G_GOLD),
+    B(1.55, 2.7, 0.12, cx, 1.48, front + 0.07, G_GREEN),
+    B(0.08, 2.4, 0.04, cx, 1.48, front + 0.14, G_GREEN_DARK),
+    Cy(0.08, 0.08, 0.1, 6, cx + 0.5, 1.4, front + 0.16, G_GOLD, { rx: Math.PI / 2 }),
+    G(new THREE.TorusGeometry(0.42, 0.15, 5, 10).translate(cx, 2.15, front + 0.22), '#2f7a3f'),
+    B(0.36, 0.2, 0.08, cx, 1.78, front + 0.34, '#c8423b'),
+    B(0.1, 0.34, 0.06, cx - 0.1, 1.6, front + 0.34, '#c8423b', { rz: 0.3 }), B(0.1, 0.34, 0.06, cx + 0.1, 1.6, front + 0.34, '#c8423b', { rz: -0.3 }),
+    ...[-0.32, 0.3, 0.05].map((dx, i) => G(new THREE.IcosahedronGeometry(0.07, 0).translate(cx + dx, 2.42 - i * 0.12, front + 0.36), G_GOLD)),
+    B(1.9, 0.18, 0.9, cx, 0.2, front + 0.45, STONE_G),
+  );
+  for (const sx of [-1, 1]) {
+    const lx = cx + sx * 1.35;
+    p.push(B(0.42, 0.5, 0.42, lx, 2.85, front + 0.3, G_GOLD), B(0.3, 0.36, 0.44, lx, 2.85, front + 0.3, GLOW), B(0.5, 0.1, 0.5, lx, 3.14, front + 0.3, TIMBER_DARK));
+  }
+  p.push(...litWindow(1.8, 1.4, cx - 3.1, 2.45, front), ...litWindow(1.8, 1.4, cx + 3.1, 2.45, front));
+  // A lit round window in each gable end.
+  for (const sx of [-1, 1]) {
+    p.push(
+      Cy(0.6, 0.6, 0.12, 10, cx + sx * (W / 2 - 0.02), 5.0, cz, G_GREEN, { rz: Math.PI / 2 }),
+      Cy(0.46, 0.46, 0.14, 10, cx + sx * (W / 2 + 0.02), 5.0, cz, GLOW, { rz: Math.PI / 2 }),
+    );
+  }
+  // Presents by the door.
+  p.push(
+    ...present(0.9, 0.7, 0.9, cx - 2.0, front + 1.3, '#c8423b', G_GOLD, 0.3),
+    ...present(0.7, 0.55, 0.7, cx - 2.9, front + 1.7, '#fbf3df', G_GREEN, -0.2),
+    ...present(0.6, 0.9, 0.6, cx - 2.2, front + 2.2, G_GREEN, G_GOLD, 0.6),
+    ...present(0.55, 0.45, 0.55, cx + 1.7, front + 1.4, G_GOLD, '#c8423b', -0.4),
+  );
+  // Green and gold sleigh, a sack and presents aboard.
+  const runner = (x) => [
+    B(0.12, 0.12, 3.6, x, 0.12, 0, G_GOLD),
+    G(new THREE.TorusGeometry(0.45, 0.07, 4, 10, Math.PI).rotateY(Math.PI / 2).translate(x, 0.57, 1.8), G_GOLD),
+    B(0.08, 0.45, 0.08, x, 0.38, -1.1, G_GOLD), B(0.08, 0.45, 0.08, x, 0.38, 0.9, G_GOLD),
+  ];
+  const sleigh = [
+    ...runner(-0.7), ...runner(0.7),
+    B(1.7, 0.8, 2.6, 0, 1.0, -0.2, G_GREEN),
+    B(1.74, 0.12, 2.64, 0, 1.42, -0.2, G_GOLD),
+    B(1.7, 1.1, 0.3, 0, 1.75, -1.4, G_GREEN), B(1.74, 0.12, 0.34, 0, 2.32, -1.4, G_GOLD),
+    B(1.7, 1.0, 0.3, 0, 1.3, 1.15, G_GREEN, { rx: -0.35 }),
+    B(1.3, 0.25, 0.9, 0, 1.5, -0.8, '#c8423b'),
+    ...present(0.8, 0.7, 0.7, -0.25, -0.75, '#c8423b', G_GOLD, 0.2).map((q) => ({ ...q, geo: q.geo.translate(0, 1.55, 0) })),
+    ...present(0.55, 0.5, 0.55, -0.2, -0.75, G_GOLD, G_GREEN, -0.3).map((q) => ({ ...q, geo: q.geo.translate(0, 2.27, 0) })),
+    ...present(0.6, 0.5, 0.6, 0.3, 0.3, '#fbf3df', '#c8423b', 0.4).map((q) => ({ ...q, geo: q.geo.translate(0, 1.32, 0) })),
+  ];
+  p.push(...place(sleigh, { x: 5.6, z: 3.6, ry: -0.5 }));
+  // A snowy fir with a gold star and baubles.
+  const fx = 6.4, fz = -3.6;
+  p.push(Cy(0.25, 0.3, 1.0, 6, fx, 0.6, fz, TIMBER_DARK));
+  [[2.0, 1.7, 1.9], [1.6, 1.5, 3.1], [1.1, 1.3, 4.2]].forEach(([r, h, y], i) => {
+    p.push(G(new THREE.ConeGeometry(r, h, 7).translate(fx, y, fz), i % 2 ? '#2f7a4a' : '#286a42'));
+    p.push(G(new THREE.ConeGeometry(r * 0.55, h * 0.4, 7).translate(fx, y + h * 0.32, fz), SNOW));
+  });
+  p.push(G(starGeo(0.4, 0.14).translate(fx, 5.25, fz), G_GOLD));
+  for (const [dx, y, dz, c] of [[1.1, 1.6, 1.0, G_GOLD], [-1.2, 1.7, 0.8, '#c8423b'], [0.8, 2.8, 0.9, '#c8423b'], [-0.6, 3.0, 1.0, G_GOLD], [0.2, 3.9, 0.75, G_GOLD]]) {
+    p.push(G(new THREE.IcosahedronGeometry(0.16, 0).translate(fx + dx, y, fz + dz), c));
+  }
+  // Snow drifts against the walls.
+  p.push(
+    G(new THREE.IcosahedronGeometry(0.9, 0).scale(1.8, 0.45, 0.9).translate(cx - 3.6, 0.2, front + 0.5), SNOW),
+    G(new THREE.IcosahedronGeometry(0.8, 0).scale(1.6, 0.4, 0.9).translate(cx + 3.8, 0.2, front + 0.45), SNOW),
+  );
+  return mesh(p);
+}
+
+Object.assign(MODEL_BUILDERS, { gym, condo, studio, house, 'post-office': postOffice, site, grotto });

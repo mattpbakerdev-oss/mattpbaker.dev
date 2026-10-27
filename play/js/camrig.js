@@ -19,7 +19,7 @@ const FADE_OUT = 10;            // fade rates (per second): quick to clear the v
 const FADE_BACK = 4;            // ...gentler coming back
 
 /** Where the eye goes when parked at each kind of building: about its middle, roof prop included. */
-export const FRAME_HEIGHT = { gym: 6.4, condo: 6.6, studio: 7, house: 3.4, 'post-office': 3.6, site: 3.2 };
+export const FRAME_HEIGHT = { gym: 6.4, condo: 6.6, studio: 7, house: 3.4, 'post-office': 3.6, site: 3.2, grotto: 4.2 };
 
 /** Resting distance and height behind the car for a speed (units per second). */
 export function chaseOffset(speed) {

@@ -80,10 +80,10 @@ test('never fires while blocked (a dialog is open), and that approach is used up
 });
 
 test('the building sites count as one place, so driving along them shows one banner', () => {
-  assert.equal(arrivalKey(byId('site-1')), arrivalKey(byId('site-3')));
+  assert.equal(arrivalKey(byId('site-2')), arrivalKey(byId('site-3')));
   assert.notEqual(arrivalKey(byId('up-lock')), arrivalKey(byId('house')));
   const a = createArrivals(PLACES);
-  const [x1, z] = at('site-1');
+  const [x1, z] = at('site-2');
   const [x3] = at('site-3');
   let fired = 0;
   for (let x = x1; x <= x3; x += 0.5) if (a.update(x, z)) fired++;
