@@ -191,9 +191,16 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
         images.map((m) => h('li', {}, h('img', { src: m.src, alt: m.alt, loading: 'lazy', decoding: 'async' })))));
     }
     for (const m of media.filter((x) => x.type === 'video')) {
-      const video = h('video', { class: 'media-video', src: m.src, poster: m.poster, controls: true, muted: true, playsinline: true, preload: 'none', 'aria-label': m.alt ?? place.title });
-      video.muted = true;
+      // A voiced sample starts with sound on (nothing autoplays); a silent walkthrough stays muted.
+      // A video with its own aspect (a portrait sample) keeps it rather than the 16:9 frame.
+      const muted = !m.sound;
+      const video = h('video', {
+        class: m.aspect ? 'media-video media-video-own' : 'media-video', style: m.aspect ? `aspect-ratio:${m.aspect}` : null,
+        src: m.src, poster: m.poster, controls: true, muted, playsinline: true, preload: 'none', 'aria-label': m.alt ?? place.title,
+      }, m.captions ? h('track', { kind: 'captions', src: m.captions, srclang: 'en', label: 'English', default: true }) : null);
+      video.muted = muted;
       parts.push(video);
+      if (m.note) parts.push(h('p', { class: 'media-note' }, m.note));
     }
     const yts = media.filter((m) => m.type === 'youtube');
     if (yts.length) {
@@ -287,6 +294,8 @@ export function createUI({ car, chase, world, input, events, canvas, reducedMoti
       place.email ? emailEl(place.email) : null,
       place.stats?.length ? h('dl', { class: 'stats' }, place.stats.map((s) => h('div', {}, h('dt', {}, s.value), h('dd', {}, s.label)))) : null,
       links.length ? h('div', { class: 'links' }, links) : null,
+      // No links yet (a private repo, not launched): say when, rather than leave a gap.
+      !links.length && place.status ? h('p', { class: 'panel-status' }, h('span', { class: 'panel-status-dot', 'aria-hidden': 'true' }), place.status) : null,
       soon ? h('div', { class: 'links' }, h('button', { type: 'button', class: 'btn btn-cream', onclick: () => openMap() },
         h('span', {}, 'Open the map'), h('span', { class: 'btn-icon', 'aria-hidden': 'true', html: ICON.arrow }))) : null,
       place.tech?.length ? h('div', { class: 'tech' }, h('p', { class: 'tech-label', id: 'tech-label' }, 'Built with'),

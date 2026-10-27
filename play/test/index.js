@@ -25,3 +25,4 @@ import './breakaway-fuzz.test.mjs';
 import './spots.test.mjs';
 import './breakaway-feel.test.mjs';
 import './hitstop.test.mjs';
+import './grotto.test.mjs';

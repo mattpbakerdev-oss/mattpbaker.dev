@@ -84,6 +84,34 @@ export const PLACES = [
     ],
   },
   {
+    id: 'father-christmas-video',
+    kind: 'project',
+    model: 'grotto',
+    // The first building site's plot, kept exactly, so the town's seeded scatter doesn't move.
+    position: [-45, 89.5], rotation: NORTH, footprint: [18, 14],
+    title: 'Father Christmas Video',
+    tagline: 'A personalised video from Father Christmas, written for one child by name.',
+    body: [
+      'Parents write a short letter about their child: first name, friends, three good things from this year and one wish. Claude writes the script and checks it for invented names and promised presents, ElevenLabs voices it, and a lip-synced Father Christmas in a green robe reads it. Parents get a free preview of him saying the name, then pay £7 once for the full video and a Nice List certificate, sent by private link.',
+      'No accounts, no photos, first names only, and everything is deleted after Christmas. The whole path runs end to end in mock mode, from letter to certificate. It isn’t live yet.',
+    ],
+    stats: [
+      { value: '555', label: 'tests' },
+      { value: '£7', label: 'per child, no subscription' },
+    ],
+    // The still is the video's poster: the same green-robed Father Christmas, sharper than a frame.
+    media: [{
+      type: 'video', src: '/video/father-christmas-sample.mp4', poster: '/img/father-christmas/father-christmas.jpg',
+      captions: '/video/father-christmas-sample.vtt', aspect: '64 / 81', sound: true,
+      alt: 'Sample video: Father Christmas, in a green hooded robe by candlelight, speaks to Isla by name',
+      note: 'A sample made on the real pipeline for Isla, a made-up child. Captions are on.',
+    }],
+    tech: ['Next.js', 'Claude', 'ElevenLabs', 'fal', 'Stripe'],
+    // Private repo and not launched: no links, a status line instead.
+    links: [],
+    status: 'Launching this Christmas',
+  },
+  {
     id: 'house',
     kind: 'about',
     model: 'house',
@@ -115,8 +143,8 @@ export const PLACES = [
     cv: null,
     social: [],
   },
-  ...[-45, -20, 5].map((x, i) => ({
-    id: `site-${i + 1}`,
+  ...[-20, 5].map((x, i) => ({
+    id: `site-${i + 2}`,
     kind: 'soon',
     model: 'site',
     position: [x, 89.5], rotation: NORTH, footprint: [18, 14],
@@ -135,6 +163,7 @@ export const WALLS = {
   studio: [[0, -1.2, 15, 9.6]],
   house: [[-1.5, -1.65, 6.5, 5.3]],
   'post-office': [[0, -1.1, 9, 5.8]],
+  grotto: [[-1.5, -2, 10, 7]],
 };
 
 /** Axis-aligned rect { x, z, w, d } the building covers, after rotation. */
