@@ -167,7 +167,12 @@ export function createSmash({ camera, world, car, events, chase, fader, occluder
       // (or along a wall it is pinned against); what still can't clear stops the car short.
       for (const b of knocked) {
         if (Math.abs(b.x - car.x) > 8 || Math.abs(b.z - car.z) > 8) continue;
-        if (clearOfCar(b, carNow, env, CAR_BODY, step)) moving.add(b);
+        if (clearOfCar(b, carNow, env, CAR_BODY, step)) {
+          moving.add(b);
+          // A swinging kick can sweep in further than one gentle slide covers: finish shoving it
+          // clear rather than stopping the car dead on something that isn't pinned.
+          for (let n = 0; n < 4 && blockCar(b, carNow) && clearOfCar(b, carNow, env, CAR_BODY); n++);
+        }
         block(b, speed);
       }
       // Creeping into a standing one too slowly to knock it: it is solid.

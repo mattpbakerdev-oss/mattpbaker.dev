@@ -450,7 +450,8 @@ test('rekick: one lying down is shoved along the ground ahead of the car and off
   run(r, 3);
   rekick(r, { x: Math.min(...bodySamples(r).map((p) => p[0])) - 0.5, z: r.z - 1.5, y: 0, vx: 0, vz: 10 }, 5, { reduced: true });
   assert.equal(r.mode, 'topple');
-  assert.ok(r.bvz >= 14 - 1e-9 && Math.abs(r.bvx - 4) < 1e-9);
+  // A short shove off the car's line, not a long slide or a ride along with it.
+  assert.ok(r.bvz <= 5 + 1e-9 && Math.abs(r.bvx - 6) < 1e-9, `reduced kick ${r.bvz}, ${r.bvx}`);
   assert.equal(r.yawRate, 0, 'no swing under reduced motion');
   run(r, 3, open, (x) => assert.notEqual(x.mode, 'launch'));
 });

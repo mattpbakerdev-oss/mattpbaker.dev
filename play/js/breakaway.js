@@ -545,6 +545,7 @@ export function clearOfCar(b, car, env = null, body = CAR_BODY, step = Infinity)
  * against too slowly to hit (caller decides which). Returns how to move the car back out,
  * { dx, dz, nx, nz } (n the unit direction), or null if they don't touch.
  */
+const TOUCH = 0.01;
 export function blockCar(b, car, body = CAR_BODY) {
   facing(car);
   const fx = FACE[0], fz = FACE[1];
@@ -559,7 +560,7 @@ export function blockCar(b, car, body = CAR_BODY) {
     overlap(b, car, fx, fz, body);
     front = OVER[0]; back = OVER[1];
   }
-  if (front <= 0 && back <= 0) return null;
+  if (front <= TOUCH && back <= TOUCH) return null; // float dust from an exact slide isn't contact
   // Back off the way it came: moving forwards it backs away from what is ahead, and vice versa.
   const vf = (car.vx ?? 0) * fx + (car.vz ?? 0) * fz;
   const backward = back <= 0 || (front > 0 && (vf > 0.01 || (Math.abs(vf) <= 0.01 && front <= back)));
@@ -580,8 +581,10 @@ export function rekick(b, car, now, { reduced = false, rand = Math.random } = {}
   const ux = car.vx / speed, uz = car.vz / speed;
   const cur = b.mode === 'launch' ? b.vx * ux + b.vz * uz : b.bvx * ux + b.bvz * uz;
   const k = Math.min(1, speed / KICK_PUSH); // a crawling car nudges it rather than flinging it
-  const fwd = Math.max(cur, speed + KICK_EXTRA * k);
-  const side = KICK_SIDE[b.kind] * k;
+  let fwd = Math.max(cur, speed + KICK_EXTRA * k);
+  let side = KICK_SIDE[b.kind] * k;
+  // Reduced motion: a short shove off the car's line, never a long slide or a ride along with it.
+  if (reduced || b.calm) { fwd = Math.min(fwd, REDUCED_PUSH); side = Math.max(side, 6); }
   b.knockedAt = now; b.source.down = true; b.asleep = false; b.still = 0;
   if (b.mode === 'launch') {
     if (reduced || b.calm) return b; // never in the air under reduced motion

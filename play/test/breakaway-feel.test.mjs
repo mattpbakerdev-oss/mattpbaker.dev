@@ -42,7 +42,7 @@ function sim(b, car, { env = open(), secs = 3, dt = 1 / 60, throttle = 0, reduce
   car.y = 0;
   car.heading ??= Math.atan2(car.vx, car.vz);
   const prev = { x: car.x - car.vx * dt, z: car.z - car.vz * dt };
-  let inside = 0, hitAt = -1, kicks = 0, frames = 0;
+  let inside = 0, hitAt = -1, kicks = 0, frames = 0, slowest = Infinity;
   const fx = Math.sin(car.heading), fz = Math.cos(car.heading);
   for (let i = 0; i < secs / dt; i++) {
     const speed = Math.hypot(car.vx, car.vz);
@@ -61,7 +61,9 @@ function sim(b, car, { env = open(), secs = 3, dt = 1 / 60, throttle = 0, reduce
     }
     env.car = car;
     stepBreakable(b, dt, env);
-    clearOfCar(b, car, env, CAR_BODY, step);
+    if (clearOfCar(b, car, env, CAR_BODY, step)) {
+      for (let n = 0; n < 4 && blockCar(b, car) && clearOfCar(b, car, env, CAR_BODY); n++);
+    }
     if (b.mode !== 'standing' || speed <= MIN_SPEED) {
       const push = blockCar(b, car);
       if (push) {
@@ -71,13 +73,14 @@ function sim(b, car, { env = open(), secs = 3, dt = 1 / 60, throttle = 0, reduce
       }
     }
     if (i > 2 && insideCar(b, car)) inside++;
+    if (hitAt >= 0) slowest = Math.min(slowest, Math.hypot(car.vx, car.vz));
     cb?.(b, car, i);
     frames++;
     prev.x = car.x; prev.z = car.z;
     car.vx += fx * throttle * dt; car.vz += fz * throttle * dt;
     car.x += car.vx * dt; car.z += car.vz * dt;
   }
-  return { inside, hitAt, kicks, frames };
+  return { inside, hitAt, kicks, frames, slowest };
 }
 
 /** A tree or lamp knocked over at walking pace, lying across +x; returns it with its middle. */
@@ -375,6 +378,8 @@ test('every launch still beats the car and clears it at all offsets', () => {
         const car = { x: off, z: -(CAR_BODY.hl + b.r + 0.02), vx: 0, vz: speed, heading: 0 };
         const r = sim(b, car, { throttle: 6, secs: 3 });
         assert.equal(r.inside, 0, `${b.kind} at ${speed} off ${off}: inside on ${r.inside} frames`);
+        // Smashing through never stops the car dead.
+        assert.ok(r.slowest > speed * 0.5, `${b.kind} at ${speed} off ${off}: car slowed to ${r.slowest.toFixed(2)}`);
       }
     }
   }
