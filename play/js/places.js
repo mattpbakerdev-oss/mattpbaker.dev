@@ -124,6 +124,19 @@ export const PLACES = [
   })),
 ];
 
+/**
+ * The solid walls of each model inside its plot, as [x, z, w, d] in the place's own frame (door
+ * along +z), matching models.js. The rest of a plot is forecourt, garden or drive: open ground.
+ * Breakaway lamp posts and trees lean on these, not on the plot's edge.
+ */
+export const WALLS = {
+  gym: [[0, -0.4, 15, 10.4]],
+  condo: [[-5.75, -1, 6.5, 10], [3.25, -3, 11.5, 6], [3, 2.6, 10, 5.2]],
+  studio: [[0, -1.2, 15, 9.6]],
+  house: [[-1.5, -1.65, 6.5, 5.3]],
+  'post-office': [[0, -1.1, 9, 5.8]],
+};
+
 /** Axis-aligned rect { x, z, w, d } the building covers, after rotation. */
 export function footprintRect(place) {
   const [w, d] = place.footprint;

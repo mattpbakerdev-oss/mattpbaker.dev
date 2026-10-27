@@ -37,7 +37,7 @@ function upRow(q) {
 
 /** How far below its centre the prop's lowest corner reaches (negative). */
 export function lowestOffset(b) {
-  const [hx, hy, hz] = PROP_KINDS[b.kind].half;
+  const [hx, hy, hz] = b.half ?? PROP_KINDS[b.kind].half; // breakaway.js bodies carry their own box
   const [m0, m1, m2] = upRow(b.q);
   return -(Math.abs(m0) * hx + Math.abs(m1) * hy + Math.abs(m2) * hz);
 }
@@ -99,12 +99,15 @@ export function stepBody(b, dt, groundAt) {
   return b;
 }
 
+const ALL_AXES = [0, 1, 2];
+
 /** On the ground, roll towards the nearest flat face so nothing balances on a corner. */
 function settle(b, dt) {
   const up = upRow(b.q);
-  let i = 0;
-  if (Math.abs(up[1]) > Math.abs(up[i])) i = 1;
-  if (Math.abs(up[2]) > Math.abs(up[i])) i = 2;
+  // Tall bodies (breakaway.js) list only the faces they may lie on, so they never end on an end.
+  const axes = b.lieAxes ?? ALL_AXES;
+  let i = axes[0];
+  for (const k of axes) if (Math.abs(up[k]) > Math.abs(up[i])) i = k;
   // World direction of local axis i (column i of the rotation matrix), flipped to point up.
   const [x, y, z, w] = b.q;
   const cols = [

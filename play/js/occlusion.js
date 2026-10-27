@@ -79,6 +79,7 @@ export function blockers(cx, cz, carX, carZ, shapes, half, out = []) {
   const len = Math.hypot(dx, dz) || 1;
   const px = (-dz / len) * half, pz = (dx / len) * half; // sideways, across the view
   for (const s of shapes) {
+    if (s.off) continue; // a knocked tree (breakaway.js) no longer hides anything
     if (touches(cx, cz, carX, carZ, s) ||
       touches(cx, cz, carX + px, carZ + pz, s, 0.85, false) || touches(cx, cz, carX - px, carZ - pz, s, 0.85, false)) out.push(s);
   }

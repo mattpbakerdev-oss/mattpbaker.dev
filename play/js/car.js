@@ -87,7 +87,8 @@ export class Car {
     for (let i = 0; i < 4 && this.world.groundHeightAt(x, z) > 0; i++) {
       x -= Math.sin(p.heading) * 6; z -= Math.cos(p.heading) * 6;
     }
-    const out = resolveCollisions(x, z, TUNING.radius + 0.3, this.world.colliders, 6);
+    // Clear of standing lamp posts and trees too, so a reset never lands in one and knocks it.
+    const out = resolveCollisions(x, z, TUNING.radius + 0.3, this.world.clearance?.() ?? this.world.colliders, 6);
     this.place(out.x, out.z, p.heading);
   }
 

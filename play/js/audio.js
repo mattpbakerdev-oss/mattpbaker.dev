@@ -3,7 +3,7 @@
 // "Start driving" click (a user gesture), and settings live in localStorage (through storage.js, so blocked site data is fine).
 //
 // Listens on `events`: start, sound { effects, music }, horn, bump { strength }, land { impact },
-// prop-hit { kind, strength }, walker-hit, collect, collect-all, panel-open/close,
+// prop-hit { kind, strength }, smash { kind, strength }, walker-hit, collect, collect-all, panel-open/close,
 // map-open/close, menu-open.
 
 import { safeStorage, readJSON, writeJSON } from './storage.js';
@@ -151,6 +151,22 @@ export function createAudio({ events, car, ui, storage = safeStorage() }) {
       hiss({ dur: 0.06, gain: 0.1 * k, type: 'bandpass', freq: pitch * 3, q: 1.6 });
       if (kind === 'bin') tone({ type: 'square', from: 610, to: 590, dur: 0.12, gain: 0.025 * k }); // tinny lid
     },
+    smash(kind, strength) {
+      // A lamp post: a hollow metal clang over a short crunch. A tree: a deep woody thump and a
+      // longer, lower splintering crack.
+      const k = 0.5 + Math.min(1, strength / 24) * 0.5;
+      if (kind === 'tree') {
+        tone({ from: 110, to: 38, dur: 0.32, gain: 0.5 * k });
+        tone({ type: 'triangle', from: 190, to: 70, dur: 0.18, gain: 0.22 * k });
+        hiss({ dur: 0.09, gain: 0.32 * k, type: 'bandpass', freq: 1800, q: 0.9 });
+        hiss({ at: 0.03, dur: 0.42, gain: 0.16 * k, type: 'bandpass', freq: 650, q: 0.7 });
+        for (const at of [0.05, 0.11, 0.2]) hiss({ at, dur: 0.035, gain: 0.12 * k, type: 'highpass', freq: 2600 });
+      } else {
+        tone({ from: 140, to: 50, dur: 0.2, gain: 0.34 * k });
+        hiss({ dur: 0.08, gain: 0.24 * k, type: 'bandpass', freq: 1400, q: 0.9 });
+        for (const [f, g] of [[620, 0.06], [1013, 0.04], [1580, 0.025]]) tone({ type: 'triangle', from: f, to: f * 0.97, at: 0.01, dur: 0.55, gain: g * k });
+      }
+    },
     hop() { tone({ from: 280, to: 720, dur: 0.16, gain: 0.08, attack: 0.01 }); },
     chime() {
       [76, 80, 83, 88].forEach((n, i) => {
@@ -218,6 +234,7 @@ export function createAudio({ events, car, ui, storage = safeStorage() }) {
   events.addEventListener('bump', (e) => play('bump', e.detail?.strength ?? 5));
   events.addEventListener('land', (e) => play('land', e.detail?.impact ?? 5));
   events.addEventListener('prop-hit', (e) => play('thunk', e.detail?.kind, e.detail?.strength ?? 5));
+  events.addEventListener('smash', (e) => play('smash', e.detail?.kind, e.detail?.strength ?? 5));
   events.addEventListener('walker-hit', () => play('hop'));
   events.addEventListener('collect', () => play('chime'));
   events.addEventListener('collect-all', () => play('fanfare'));
