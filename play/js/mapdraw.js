@@ -23,9 +23,10 @@ export const MODEL_COLOUR = {
 const HALF = PLOT_HALF + 2;
 // Matt's house and the post office sit side by side: the house label goes underneath and the
 // post office's to the right of its building, so neither runs into the other or the Up Lock pin.
-// Father Christmas Video sits beside the building sites, so its long label goes underneath too.
-const LABEL_BELOW = new Set(['Matt’s house', 'Father Christmas Video']);
-const LABEL_RIGHT = new Set(['Post office']);
+// Father Christmas Video sits beside the building sites at the bottom edge: its long label goes
+// above it and the sites' label to the right of the last site, so the two never meet.
+const LABEL_BELOW = new Set(['Matt’s house']);
+const LABEL_RIGHT = new Set(['Post office', 'Building sites']);
 
 /** World to canvas pixels for a square canvas `size` px wide with `pad` px of margin. */
 export function projector(size, pad) {
@@ -166,7 +167,7 @@ export function drawCar(ctx, size, { pad, car, dot = 4 }) {
   ctx.stroke();
 }
 
-/** Place names for the big map. The three building sites share one label. */
+/** Place names for the big map. The building sites share one label. */
 export function drawLabels(ctx, size, { pad, places, font = 13 }) {
   const P = projector(size, pad);
   const groups = new Map();
@@ -187,9 +188,10 @@ export function drawLabels(ctx, size, { pad, places, font = 13 }) {
     const h = font * 1.75;
     let y = below ? P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2 : P.y(minZ) - font * 1.2;
     if (y < pad + font) y = P.y(Math.max(...rects.map((r) => r.z + r.d / 2))) + font * 1.2;
+    if (y > size - pad - h / 2) y = P.y(minZ) - font * 1.2; // no room underneath: above it instead
     let cx = x;
     if (LABEL_RIGHT.has(label)) { // beside the building, level with its middle
-      const r = rects[0];
+      const r = rects.reduce((a, b) => (b.x > a.x ? b : a)); // the furthest right of the group
       cx = P.x(r.x + r.w / 2) + font * 0.5 + w / 2;
       y = P.y(r.z);
     }

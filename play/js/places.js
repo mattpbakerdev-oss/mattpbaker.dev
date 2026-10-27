@@ -92,17 +92,17 @@ export const PLACES = [
     title: 'Father Christmas Video',
     tagline: 'A personalised video from Father Christmas, written for one child by name.',
     body: [
-      'Parents write a short letter about their child: first name, friends, three good things from this year and one wish. Claude writes the script and checks it for invented names and promised presents, ElevenLabs voices it, and a lip-synced Father Christmas in a green robe reads it. Parents hear him say the name free, pay £7 once, then get the video and a Nice List certificate by private link.',
+      'Parents write a short letter about their child: first name, friends, three good things from this year and one wish. Claude writes the script and checks it for invented names and promised presents, ElevenLabs voices it, and a lip-synced Father Christmas in a green robe reads it. Parents get a free preview of him saying the name, then pay £7 once for the full video and a Nice List certificate, sent by private link.',
       'No accounts, no photos, first names only, and everything is deleted after Christmas. The whole path runs end to end in mock mode, from letter to certificate. It isn’t live yet.',
     ],
     stats: [
       { value: '555', label: 'tests' },
-      { value: '£7', label: 'one price, paid once' },
+      { value: '£7', label: 'per child, no subscription' },
     ],
     // The still is the video's poster: the same green-robed Father Christmas, sharper than a frame.
     media: [{
       type: 'video', src: '/video/father-christmas-sample.mp4', poster: '/img/father-christmas/father-christmas.jpg',
-      captions: '/video/father-christmas-sample.vtt', aspect: '4 / 5', sound: true,
+      captions: '/video/father-christmas-sample.vtt', aspect: '64 / 81', sound: true,
       alt: 'Sample video: Father Christmas, in a green hooded robe by candlelight, speaks to Isla by name',
       note: 'A sample made on the real pipeline for Isla, a made-up child. Captions are on.',
     }],
