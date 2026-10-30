@@ -92,24 +92,25 @@ export const PLACES = [
     title: 'Father Christmas Video',
     tagline: 'A personalised video from Father Christmas, written for one child by name.',
     body: [
-      'Parents write a short letter about their child: first name, friends, three good things from this year and one wish. Claude writes the script and checks it for invented names and promised presents, ElevenLabs voices it, and a lip-synced Father Christmas in a green robe reads it. Parents get a free preview of him saying the name, then pay £7 once for the full video and a Nice List certificate, sent by private link.',
-      'No accounts, no photos, first names only, and everything is deleted after Christmas. The whole path runs end to end in mock mode, from letter to certificate. It isn’t live yet.',
+      'Parents write a short letter about their child: first name, friends, three good things from this year and one wish. Claude writes the script and checks it for invented names and promised presents, ElevenLabs voices it, and a lip-synced Father Christmas in a green robe reads it. Parents pay once, £4.99 for Animated or £7.99 for Painted, and get the video and a Nice List certificate by private link, usually 5 to 12 minutes later.',
+      'No accounts, no photos, first names only, and everything is deleted after Christmas. It is live at fatherchristmas.io with payments in test mode until launch.',
     ],
     stats: [
-      { value: '555', label: 'tests' },
-      { value: '£7', label: 'per child, no subscription' },
+      { value: '882', label: 'tests' },
+      { value: '£4.99', label: 'per child, about $0.60 to render' },
     ],
-    // The still is the video's poster: the same green-robed Father Christmas, sharper than a frame.
     media: [{
-      type: 'video', src: '/video/father-christmas-sample.mp4', poster: '/img/father-christmas/father-christmas.jpg',
-      captions: '/video/father-christmas-sample.vtt', aspect: '64 / 81', sound: true,
+      type: 'video', src: '/video/father-christmas-animated.mp4', poster: '/video/father-christmas-animated-poster.jpg',
+      captions: '/video/father-christmas.vtt', aspect: '4 / 5', sound: true,
       alt: 'Sample video: Father Christmas, in a green hooded robe by candlelight, speaks to Isla by name',
       note: 'A sample made on the real pipeline for Isla, a made-up child. Captions are on.',
     }],
     tech: ['Next.js', 'Claude', 'ElevenLabs', 'fal', 'Stripe'],
-    // Private repo and not launched: no links, a status line instead.
-    links: [],
-    status: 'Launching this Christmas',
+    // Private repo: the write-up and the live site (test mode) only.
+    links: [
+      { label: 'Read the full write-up', href: '/work/father-christmas', primary: true },
+      { label: 'See the live site (test mode)', href: 'https://fatherchristmas.io' },
+    ],
   },
   {
     id: 'house',

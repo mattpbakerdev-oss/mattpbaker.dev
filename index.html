@@ -167,7 +167,7 @@
   @media (max-width: 720px) { .section { padding-top: 80px; } }
 
   /* Work cards */
-  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
   .card {
     position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 20px;
     background: var(--bg-raised); border-radius: var(--radius-card); padding: 26px 26px 28px; min-height: 320px;
@@ -190,7 +190,7 @@
     letter-spacing: -0.05em; color: rgba(245,241,238,0.06); pointer-events: none; user-select: none;
     font-variant-numeric: tabular-nums; white-space: nowrap;
   }
-  @media (max-width: 960px) { .cards { grid-template-columns: 1fr; } .card { min-height: 0; } }
+  @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } .card { min-height: 0; } }
 
   /* Stack cloud */
   .cloud { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 12px; max-width: 760px; margin: 0 auto; padding: 16px 0 8px; }
@@ -321,6 +321,13 @@
         <span class="more">See the work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span class="ghost" aria-hidden="true">98.0</span>
       </a>
+      <a class="card" href="/work/father-christmas">
+        <div class="card-head"><h3>Father Christmas Video</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        <p>A personalised video from Father Christmas, written for one child by name. Claude writes and checks the script, ElevenLabs voices it and fal lip-syncs it, for about $0.60 a video sold at £4.99. <b>882 tests, live in test mode for Christmas.</b></p>
+        <div class="tags"><span>Next.js</span><span>Claude</span><span>ElevenLabs</span><span>fal</span><span>Stripe</span></div>
+        <span class="more">See the work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        <span class="ghost" aria-hidden="true">882</span>
+      </a>
       <a class="card" href="/work/up-lock">
         <div class="card-head"><h3>Up Lock</h3><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
         <p>An iPhone app that locks distracting apps until you finish a set of push-ups, counted by the camera on the phone itself. Every anti-cheat rule has a test, because the first version counted waving. <b>Live on the App Store.</b></p>
@@ -358,6 +365,9 @@
       <span role="listitem" style="--r:-3deg">Python</span>
       <span role="listitem" style="--r:4deg" class="amber">Vercel</span>
       <span role="listitem" style="--r:-1deg">ffmpeg</span>
+      <span role="listitem" style="--r:2deg">Stripe</span>
+      <span role="listitem" style="--r:-3deg" class="outline">ElevenLabs</span>
+      <span role="listitem" style="--r:4deg">fal</span>
       <span role="listitem" style="--r:3deg" class="outline">Postgres</span>
       <span role="listitem" style="--r:-4deg">Git</span>
     </div>

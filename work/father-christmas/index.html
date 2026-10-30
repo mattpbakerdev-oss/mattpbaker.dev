@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Father Christmas Video · Matt Baker</title>
+<meta name="description" content="Father Christmas Video: a personalised video from Father Christmas, written for one child by name. What was measured, and three things the AI got wrong on the way to a working pipeline.">
+<meta property="og:title" content="Father Christmas Video · Matt Baker">
+<meta property="og:description" content="A personalised Father Christmas video for one child, written by Claude, voiced by ElevenLabs and lip-synced by fal. 882 tests, about $0.60 to render, delivered minutes after payment.">
+<meta property="og:url" content="https://mattpbaker.dev/work/father-christmas">
+<meta property="og:image" content="https://mattpbaker.dev/work/father-christmas/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#120F0F">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/work/work.css">
+</head>
+<body>
+
+<header class="nav wrap">
+  <a class="wordmark" href="/">Matt Baker</a>
+  <nav class="nav-pill" aria-label="Work">
+    <a href="/work/listing-check">Listing Check</a>
+    <a href="/work/father-christmas" aria-current="page"><span><span class="xs-hide">Father </span>Christmas</span></a>
+    <a href="/work/up-lock">Up Lock</a>
+    <a href="/work/ugc-pipeline"><span>UGC<span class="xs-hide"> pipeline</span></span></a>
+  </nav>
+  <div class="nav-right">
+    <a class="pill" href="mailto:mattpbakerdev@gmail.com">Email me</a>
+  </div>
+</header>
+
+<main>
+  <section class="page-head wrap">
+    <p class="crumb"><a href="/">Work</a> / Father Christmas Video</p>
+    <h1>Father Christmas Video</h1>
+    <p class="lede"><b>A personalised video from a British Father Christmas, written for one child by name.</b> A parent writes a short letter: first name, friends, three good things from the year and one wish. Father Christmas reads back a script made from it, and never promises a present. Two styles, Animated at £4.99 and Painted at £7.99, paid once, with a printable Nice List certificate. No accounts, no photos, first names only, and everything is deleted after Christmas.</p>
+    <p class="status-line"><span class="status-dot" aria-hidden="true"></span>Live in test mode; launching for Christmas 2026.</p>
+  </section>
+
+  <section class="section wrap" id="see-it">
+    <span class="eyebrow">See it</span>
+    <div class="pair">
+      <figure>
+        <div class="frame">
+          <video controls preload="metadata" playsinline poster="/video/father-christmas-animated-poster.jpg" width="640" height="800" aria-label="Animated sample: a cartoon Father Christmas in a green hooded robe, by candlelight, speaks to Isla by name">
+            <source src="/video/father-christmas-animated.mp4" type="video/mp4">
+            <track kind="captions" src="/video/father-christmas.vtt" srclang="en" label="English" default>
+            Your browser does not play MP4 video. <a href="/video/father-christmas-animated.mp4">Download the Animated sample</a> instead.
+          </video>
+        </div>
+        <figcaption><b>Animated</b> £4.99</figcaption>
+      </figure>
+      <figure>
+        <div class="frame">
+          <video controls preload="metadata" playsinline poster="/video/father-christmas-painted-poster.jpg" width="640" height="800" aria-label="Painted sample: a painterly Father Christmas in a green fur-trimmed hood, in a candlelit study, speaks to Isla by name">
+            <source src="/video/father-christmas-painted.mp4" type="video/mp4">
+            <track kind="captions" src="/video/father-christmas.vtt" srclang="en" label="English" default>
+            Your browser does not play MP4 video. <a href="/video/father-christmas-painted.mp4">Download the Painted sample</a> instead.
+          </video>
+        </div>
+        <figcaption><b>Painted</b> £7.99</figcaption>
+      </figure>
+    </div>
+    <p class="caption">52 seconds each, with sound and captions. Both are real renders from the production pipeline, made for Isla, a made-up child.</p>
+  </section>
+
+  <section class="section wrap" id="measured">
+    <span class="eyebrow">What was measured</span>
+    <div class="stats" role="list">
+      <div class="stat" role="listitem"><b>882</b><span>Tests passing, none failing</span></div>
+      <div class="stat" role="listitem"><b>~$0.60</b><span>To render one video, sold at £4.99 or £7.99</span></div>
+      <div class="stat" role="listitem"><b>5–12 min</b><span>From payment to the video in the parent's inbox, on live test orders</span></div>
+      <div class="stat" role="listitem"><b>3 days</b><span>From the first commit to chained, lip-synced parts</span></div>
+    </div>
+    <p class="tablenote">It has not launched, so there are no sales or customer numbers yet. Payments run in Stripe test mode until it does.</p>
+  </section>
+
+  <section class="section wrap" id="wrong">
+    <span class="eyebrow">What the AI got wrong, and how it was fixed</span>
+    <div class="stories">
+      <p><b>Pattern rules could not guard the script.</b> The script must never invent a person or promise a present. Two rounds of regex rules failed both ways: they flagged ordinary praise like "Brave" and missed invented names and gift promises worded a new way. A deterministic checker now stays as a backstop, and Claude Haiku reads every script as a judge for invented people and promised presents, at about £0.0002 a script.</p>
+      <p><b>The first live order rendered but never arrived.</b> fal lip-synced all seven parts, then the ffmpeg step that joins them hit Vercel's 300-second limit, and on retry it ran out of memory. The parts are now joined one at a time with ffmpeg held to two threads. The next live order was delivered end to end.</p>
+      <p><b>The cheap lip-sync model could not find a cartoon face.</b> LatentSync could not reliably detect the painted Father Christmas. A semi-realistic 3D version it could detect had lip-sync too poor to sell. A higher-end model, Kling Avatar, cost about $3.37 a video, too much at these prices. Both styles moved to fal Boreal at about $0.60 a video.</p>
+    </div>
+  </section>
+
+  <section class="section wrap" id="links">
+    <span class="eyebrow">Links</span>
+    <div class="linkrow">
+      <a class="pill primary" href="https://fatherchristmas.io" target="_blank" rel="noopener">See the live site (test mode)</a>
+    </div>
+    <p class="tablenote">Checkout is in Stripe test mode, so no real card will be charged. The repository is private.</p>
+  </section>
+
+  <div class="back wrap"><a href="/">&larr; Back to all work</a></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="mailto:mattpbakerdev@gmail.com">mattpbakerdev@gmail.com</a>
+    <a href="https://github.com/mattpbakerdev-oss" target="_blank" rel="noopener">GitHub</a>
+    <span class="built">Built with <b>Claude Code</b> by Matt</span>
+  </div>
+</footer>
+</body>
+</html>
