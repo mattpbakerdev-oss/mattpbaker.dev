@@ -93,7 +93,7 @@ export const PLACES = [
     tagline: 'A personalised video from Father Christmas, written for one child by name.',
     body: [
       'Parents write a short letter about their child: first name, friends, three good things from this year and one wish. Claude writes the script and checks it for invented names and promised presents, ElevenLabs voices it, and a lip-synced Father Christmas in a green robe reads it. Parents pay once, £4.99 for Animated or £7.99 for Painted, and get the video and a Nice List certificate by private link, usually 5 to 12 minutes later.',
-      'No accounts, no photos, first names only, and everything is deleted after Christmas. It is live at fatherchristmas.io with payments in test mode until launch.',
+      'No accounts, no photos, first names only, and everything is deleted after Christmas. It is live now at fatherchristmas.io.',
     ],
     stats: [
       { value: '882', label: 'tests' },
@@ -106,10 +106,10 @@ export const PLACES = [
       note: 'A sample made on the real pipeline for Isla, a made-up child. Captions are on.',
     }],
     tech: ['Next.js', 'Claude', 'ElevenLabs', 'fal', 'Stripe'],
-    // Private repo: the write-up and the live site (test mode) only.
+    // Private repo: the write-up and the live site only.
     links: [
       { label: 'Read the full write-up', href: '/work/father-christmas', primary: true },
-      { label: 'See the live site (test mode)', href: 'https://fatherchristmas.io' },
+      { label: 'See the live site', href: 'https://fatherchristmas.io' },
     ],
   },
   {
